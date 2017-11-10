@@ -72,7 +72,7 @@ def main()
 		case cmd
 		when "EDGEB"; edgeb(args)
 		when "EDGED"; edged(args)
-		when "EDGEU”; edgeU(args)
+		when "EDGEU"; edgeU(args)
 		when "DUMPTABLE"; dumptable(args)
 		when "SHUTDOWN"; shutdown(args)
 		when "STATUS"; status()
