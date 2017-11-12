@@ -4,6 +4,18 @@ $hostname = nil
 
 
 # --------------------- Part 1 --------------------- # 
+class RoutingInfo
+	attr_accessor :src, :dst, :nextHop, :distance
+	def initialize(src, dst, nextHop, distance)
+		@src = src
+		@dst = dst
+		@nextHop = nextHop
+		@distance = distance
+	end
+	def to_s
+		"#{src},#{dst},#{nextHop},#{distance}"
+	end
+end
 
 def edgeb(cmd)
 	STDOUT.puts "EDGE: not implemented"
