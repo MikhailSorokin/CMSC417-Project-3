@@ -69,6 +69,39 @@ def shutdown(cmd)
 	exit(0)
 end
 
+def addtotable(cmd)
+	#Parse
+	destNode = cmd[0]
+
+	if $rtable.has_key?(destNode)
+		return false
+	else
+		$rtable[destNode] = RoutingInfo.new($hostname, destNode, destNode, 1)
+		return true
+end
+
+def serverloop()
+	$server = TCPServer.open($port)
+	loop do
+		Thread.fork(server.accept) do |client| 
+			# Can we assume the client will only send one line?
+			line = client.gets()
+			line = line.strip()
+			arr = line.split(' ')
+			cmd = arr[0]
+			args = arr[1..-1]
+			case cmd
+			when "EDGEB"
+				# Right now addtotable will only fail if that destination is already in the table
+				# are there any other cases where we might not want to reply to the other node?
+				if(addtotable(cmd))
+					client.puts "ENTRYADDED"
+			else client.puts "ERROR: INVALID COMMAND \"#{cmd}\""
+			end
+			client.close
+		end
+	end
+end
 
 
 # --------------------- Part 2 --------------------- # 
@@ -146,7 +179,9 @@ def setup(hostname, port, nodes, config)
 	$BUF_SIZE = 1023
 
 	$socketToNode = {} #Hashmap to index node by socket
+	$rtable = {} #Hashmap to routing info by index node
 
+	Thread.new{serverloop()}
 	main()
 
 end
