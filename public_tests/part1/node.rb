@@ -36,6 +36,7 @@ def edgeb(cmd)
 		$socketToNode[client] = destNode 
 		$socketInputBuf[destNode] = ""
 	}
+	handleClientEntryAdd(destNode)
     Thread.new{sendEdge(clientSocket, srcIP)}
 end
 
@@ -48,7 +49,7 @@ end
 
 def dumptable(cmd)
 	out_file = File.new(cmd[0], "w+")
-	$rtable.each do |entry|
+	$rtable.each do |node, entry|
 		out_file.puts("#{entry}")
 	end
 	out_file.close
@@ -245,7 +246,7 @@ def setup(hostname, port, nodes, config)
 	end
 
 	Thread.new{listeningloop()}
-	Thread.new{receivingloop()}
+	#Thread.new{receivingloop()}
 	main()
 end
 
