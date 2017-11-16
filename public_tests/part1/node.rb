@@ -32,7 +32,7 @@ def edgeb(cmd)
 	clientSocket = TCPSocket.new(destIP, $nodeToPort[destNode])
 	#Open connection towards destination IP from source)
 	newmsg = "APPLYEDGE" << " " << destNode
-	$socketBuf[clientSocket] = "" << newmsg
+	$socketBuf[clientSocket] = newmsg
 end
 
 def dumptable(cmd)
@@ -58,8 +58,7 @@ def listeningloop()
 	$server = TCPServer.new $port
 	loop do
 		Thread.fork($server.accept) do |clientSocket|
-			STDOUT.puts "LISTENING TO NEW CLIENT"
-			$socketsArray.push[clientSocket]
+			$socketsArray.push(clientSocket)
 		end
 	end
 end
@@ -68,7 +67,6 @@ def receivingloop()
 	STDOUT.puts "RECEIVING"
 	loop do
 		$socketsArray.each do |servSocket|
-			STDOUT.puts "RECEIVING SOME MESSAGE"
 		  	ready = IO.select([servSocket])
     		readable = ready[0] #0 is sockets for reading
 
@@ -79,7 +77,7 @@ def receivingloop()
 	                    STDERR.puts "The connection is dead. Try again. Exit."
 	                    exit(1)
 	                else
-						$socketBuf[socket] << buf
+						$socketBuf[socket] = buf
 	                end
 	            end
             end
@@ -92,8 +90,8 @@ def msgHandler()
 	STDOUT.puts "WRITING"
 	loop do
 		$socketBuf.each do |socket, str|
-			STDOUT.puts "WRITING INSIDE"
-			args = split(str, " ")
+			str = str.strip()
+			args = str.split(" ")
 			cmd = args[0]
 			destNode = args[1]
 			case (cmd)		
@@ -110,11 +108,11 @@ def handleEntryAdd(socket, destNode)
 	if(!addtotable(destNode))
 		STDERR.puts "ERROR: INVALID ACKNOWLEDGEMENT"
 	end
-	socket.sendmsg("APPLYEDGE" << " " << $hostname)
+	socket.write("APPLYEDGE" << " " << $hostname)
+	$socketBuf.clear
 end
 
 def addtotable(node)
-			STDOUT.puts "ADDING NODE"
 	# You know, I'm not sure this is even necessary. I think we could assume that addtotable is only called on new destinations.
 	if $rtable.has_key?(node)
 		return false
