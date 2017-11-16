@@ -39,7 +39,7 @@ def edgeb(cmd)
 end
 
 def sendEdge(clientSocket, destNode, srcIP)
-	str = "" << $hostname << " EDGEB " << destNode << " " << srcIP
+	str = " EDGEB " << $hostname << " " << srcIP
 	clientSocket.puts str
 	clientSocket.flush
 end
@@ -56,6 +56,27 @@ def receivingloop()
 		$semaphore.synchronize {
 			$socketToNode.each do |socket, node|
 				if(socket.ready?)
+
+					#socketInputBuf[socket] << socket.gets()
+					line = client.gets()
+					args = split(line, " ")
+					cmd = args[0]
+					case (cmd)
+					#Acknowledgements
+					when "ENTRYADDED"; handleClientEntryAdd(args[1])
+					end
+				end
+			end
+		}
+	end
+end
+
+=begin for later need to parse messages and clear buffer as messages are read
+def msghandler()
+	loop do
+		$semaphore.synchronize {
+			$socketToNode.each do |socket, node|
+				case(socketInputBuf[socket])
 					socketInputBuf[socket] << socket.gets()
 					args = split(socketInputBuf[socket], " ")
 					cmd = args[0]
@@ -67,6 +88,7 @@ def receivingloop()
 		}
 	end
 end
+=end
 
 def handleClientEntryAdd(args)
 	if(!addtotable(args))
@@ -106,7 +128,7 @@ def listeningloop()
 			arr = line.split(' ')
 
 			$semaphore.synchronize {
-				$socketToNode[client] = arr[0]
+				$socketToNode[client] = arr[1]
 				$socketInputBuf[client] = ""
 			}
 			
@@ -114,7 +136,6 @@ def listeningloop()
 			node = arr[1]
 			srcIP = arr[2]
 
-			args = arr[2..-1]
 			case cmd
 			when "EDGEB"
 				if(addtotable(node))
