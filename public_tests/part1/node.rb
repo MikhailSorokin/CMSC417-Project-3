@@ -29,23 +29,12 @@ def edgeb(cmd)
 	destIP = cmd[1]
 	destNode = cmd[2]
 
-    #Another thread for receiving
-	#Open connection towards destination IP from source
-	$semaphore.synchronize {
-		client = TCPSocket.new(destIP, $nodeToPort[destNode])
-		$socketToNode[client] = destNode 
-		$socketInputBuf[destNode] = ""
-	}
-	handleClientEntryAdd(destNode)
-    Thread.new{sendEdge(clientSocket, srcIP)}
+	clientSocket = TCPSocket.new(destIP, $nodeToPort[destNode])
+	#Open connection towards destination IP from source)
+	$socketToNode[clientSocket] = $hostname 
+	$socketBuf[destNode] = ""
+    Thread.new{msgHandler(srcIP, destIP, destNode)}
 end
-
-def sendEdge(clientSocket, srcIP)
-	str = " EDGEB " << $hostname << " " << srcIP
-	clientSocket.puts str
-	clientSocket.flush
-end
-	
 
 def dumptable(cmd)
 	out_file = File.new(cmd[0], "w+")
@@ -55,60 +44,67 @@ def dumptable(cmd)
 	out_file.close
 end
 
-def receivingloop()
-	loop do
-		$semaphore.synchronize {
-			$socketToNode.each do |socket, node|
-				if(socket.ready?)
-
-					socketInputBuf[socket] << socket.gets()
-					line = socketInputBuf[socket]
-					args = split(line, " ")
-					cmd = args[0]
-					case (cmd)
-					#Acknowledgements
-					when "ENTRYADDED"; handleClientEntryAdd(args[1])
-					end
-				end
-			end
-		}
-	end
-end
-
-=begin for later need to parse messages and clear buffer as messages are read
-def msghandler()
-	loop do
-		$semaphore.synchronize {
-			$socketToNode.each do |socket, node|
-				case(socketInputBuf[socket])
-					socketInputBuf[socket] << socket.gets()
-					args = split(socketInputBuf[socket], " ")
-					cmd = args[0]
-					case (cmd)		
-					#Acknowledgements
-					when "ENTRYADDED"; handleClientEntryAdd(args)
-				end
-			end
-		}
-	end
-end
-=end
-
-def handleClientEntryAdd(args)
-	if(!addtotable(args))
-		STDERR.puts "ERROR: INVALID ACKNOWLEDGEMENT \"#{args}\""
-	end
-end
-
 def shutdown(cmd)
 	#Create a connection for each TCP Socket again
 	STDOUT.flush
-	$semaphore.synchronize {
-		$socketToNode.each_key do |socket, node|
-			socket.close
-		end
-	}
+	$socketToNode.each_key do |socket, node|
+		socket.close
+	end
 	exit(0)
+end
+
+# ----------------------- Loops methods -----------------------#
+def listeningloop()
+	$server = TCPServer.new $port
+	loop do
+		Thread.fork($server.accept)
+	end
+end
+
+def receivingloop()
+	loop do
+		$socketToNode.each do |servSocket, node|
+		  	ready = IO.select([servSocket])
+    		readable = ready[0] #0 is sockets for reading
+
+    		readable.each do |socket|
+	            if socket == servSocket
+	                buf = socket.recv(1024)
+	                if buf.length == 0
+	                    STDERR.puts "The connection is dead. Try again. Exit."
+	                    exit(1)
+	                else
+						socketBuf[socket] << buf
+	                end
+	            end
+            end
+		end
+	end
+end
+
+#Need to parse messages and clear buffer as messages are read
+def msgHandler(srcIP, destIP, clientNode)
+	loop do
+		$socketBuf.each do |socket, str|
+			args = split(str, " ")
+			cmd = args[0]
+			destNode = args[3]
+			case (cmd)		
+			#Acknowledgements
+			when "EDGEB"; handleEntryAdd(socket,destNode, str)
+			else STDERR.puts "ERROR: INVALID COMMAND \"#{cmd}\""
+			end
+		end
+	end
+end
+	
+# - Helpers to add stuff to tables
+def handleEntryAdd(socket, destNode, str)
+	if(!addtotable(destNode))
+		STDERR.puts "ERROR: INVALID ACKNOWLEDGEMENT \"#{args}\""
+	else 
+		socket.sendmsg("EDGEB " << $hostname << " ")
+	end
 end
 
 def addtotable(node)
@@ -118,38 +114,6 @@ def addtotable(node)
 	else
 		$rtable[node] = RoutingInfo.new($hostname, node, node, 1)
 		return true
-	end
-end
-
-def listeningloop()
-	$server = TCPServer.open($port)
-	loop do
-		Thread.fork($server.accept) do |client| 
-			# Need to add client socket to $socketToNode, 
-			# Let's assume the client will only send one line
-			line = client.gets()
-			line = line.strip()
-			arr = line.split(' ')
-
-			cmd = arr[0]
-			node = arr[1]
-			srcIP = arr[2]
-
-			$semaphore.synchronize {
-				$socketToNode[client] = node
-				$socketInputBuf[client] = ""
-			}
-		
-			case cmd
-			when "EDGEB"
-				if(addtotable(node))
-					str = "ENTRYADDED " << $hostname
-					clientSocket = TCPSocket.new(srcIP, $port)
-					clientSocket.write(str)
-				end
-			else client.puts "ERROR: INVALID COMMAND \"#{cmd}\""
-			end
-		end
 	end
 end
 
@@ -192,9 +156,7 @@ def circuit(cmd)
 end
 
 
-
-
-# do main loop here.... 
+# --------------------- Main Loop --------------------- # 
 def main()
 
 	while(line = STDIN.gets())
@@ -225,12 +187,12 @@ def setup(hostname, port, nodes, config)
 	$hostname = hostname #this is the SRC node
 	$port = port
 
-	$semaphore = Mutex.new
+	#$semaphore = Mutex.new
 
 	#set up ports, server, buffers
 	$socketToNode = {} #Hashmap to index node by socket
 	$rtable = {} #Hashmap to routing info by index node
-	$socketInputBuf = {} #Hashmap to index input buffers by socket
+	$socketBuf = {} #Hashmap to index input buffers by socket
 	$nodeToPort = {} #Hashmap of node to port
 
 	File.open(nodes, "r") do |f|
@@ -246,7 +208,7 @@ def setup(hostname, port, nodes, config)
 	end
 
 	Thread.new{listeningloop()}
-	#Thread.new{receivingloop()}
+	Thread.new{receivingloop()}
 	main()
 end
 
