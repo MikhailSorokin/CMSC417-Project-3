@@ -1,4 +1,5 @@
 require 'socket' #Required import to allow server connection 
+require 'io/wait' #Using ready? method to see if data available in each socket
 
 $port = nil
 $hostname = nil
@@ -42,7 +43,19 @@ end
 	
 
 def dumptable(cmd)
-	STDOUT.puts "DUMPTABLE: not implemented"
+	$rtable.each do |entry|
+		puts entry
+	end
+end
+
+def receivingloop()
+	loop do
+		$socketToNode.each do |client|
+			if(client.ready?)
+				socketInputBuf[client] << client.gets()
+			end
+		end
+	end
 end
 
 def shutdown(cmd)
@@ -59,6 +72,7 @@ def addtotable(cmd)
 	puts "AHH"
 	destNode = cmd[1]
 
+	# You know, I'm not sure this is even necessary. I think we could assume that addtotable is only called on new destinations.
 	if $rtable.has_key?(destNode)
 		return false
 	else
@@ -67,11 +81,12 @@ def addtotable(cmd)
 	end
 end
 
-def serverloop()
+def listeningloop()
 	$server = TCPServer.open($port)
 	loop do
 		Thread.fork($server.accept) do |client| 
-			# Can we assume the client will only send one line?
+			# Need to add client socket to $socketToNode, 
+			# Let's assume the client will only send one line
 			line = client.gets()
 			line = line.strip()
 			arr = line.split(' ')
@@ -79,16 +94,14 @@ def serverloop()
 			args = arr[1..-1]
 			case cmd
 			when "EDGEB"
-				# Right now addtotable will only fail if that destination is already in the table
-				# are there any other cases where we might not want to reply to the other node?
-
 				if(addtotable(cmd))
 					str = "ENTRYADDED " << $hostname
 					clientSocket = TCPSocket.new(arr[2], $port)
 					clientSocket.write(str)
-				else client.puts "ERROR: INVALID COMMAND \"#{cmd}\""
-				end 
+				end
+			else client.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
+			# I think we might have to keep the connection open until shutdown, but maybe that won't make a difference until later parts
 			client.close
 		end
 	end
@@ -185,8 +198,10 @@ def setup(hostname, port, nodes, config)
 
 	$socketToNode = {} #Hashmap to index node by socket
 	$rtable = {} #Hashmap to routing info by index node
+	$socketInputBuf = {} #Hashmap to index input buffers by socket
+	$socketOutputBuf = {} #Hashmap to index output buffers by socket
 
-	Thread.new{serverloop()}
+	Thread.new{listeningloop()}
 	main()
 end
 
