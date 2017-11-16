@@ -231,7 +231,7 @@ def setup(hostname, port, nodes, config)
 			# Assign values to a hashmap
 			nodeName = arr[0]
 			portNum = arr[1]
-			nodeToPort[nodeName] = portNum
+			$nodeToPort[nodeName] = portNum
 		end
 	end
 
