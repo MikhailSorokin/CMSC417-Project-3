@@ -223,6 +223,12 @@ def setup(hostname, port, nodes, config)
 
 	$semaphore = Mutex.new
 
+	#set up ports, server, buffers
+	$socketToNode = {} #Hashmap to index node by socket
+	$rtable = {} #Hashmap to routing info by index node
+	$socketInputBuf = {} #Hashmap to index input buffers by socket
+	$nodeToPort = {} #Hashmap of node to port
+
 	File.open(nodes, "r") do |f|
 		f.each_line do |line|
 			line = line.strip()
@@ -234,12 +240,6 @@ def setup(hostname, port, nodes, config)
 			$nodeToPort[nodeName] = portNum
 		end
 	end
-
-	#set up ports, server, buffers
-	$socketToNode = {} #Hashmap to index node by socket
-	$rtable = {} #Hashmap to routing info by index node
-	$socketInputBuf = {} #Hashmap to index input buffers by socket
-	$nodeToPort = {} #Hashmap of node to port
 
 	Thread.new{listeningloop()}
 	Thread.new{receivingloop()}
