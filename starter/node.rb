@@ -4,7 +4,6 @@ require 'io/wait' #Using ready? method to see if data available in each socket
 $port = nil
 $hostname = nil
 $server = nil
-$BUF_SIZE = 1024
 
 # --------------------- Part 1 --------------------- # 
 class RoutingInfo
@@ -58,9 +57,20 @@ def receivingloop()
 			$socketToNode.each do |socket, node|
 				if(socket.ready?)
 					socketInputBuf[socket] << socket.gets()
+					args = split(socketInputBuf[socket], " ")
+					cmd = args[0]
+					case (cmd)		
+					#Acknowledgements
+					when "ENTRYADDED"; handleClientEntryAdd(args)
 				end
 			end
 		}
+	end
+end
+
+def handleClientEntryAdd(args)
+	if(!addtotable(args))
+		STDERR.puts "ERROR: INVALID ACKNOWLEDGEMENT \"#{args}\""
 	end
 end
 
@@ -75,15 +85,12 @@ def shutdown(cmd)
 	exit(0)
 end
 
-def addtotable(cmd)
-	#Parse
-	destNode = cmd[1]
-
+def addtotable(node)
 	# You know, I'm not sure this is even necessary. I think we could assume that addtotable is only called on new destinations.
-	if $rtable.has_key?(destNode)
+	if $rtable.has_key?(node)
 		return false
 	else
-		$rtable[destNode] = RoutingInfo.new($hostname, destNode, destNode, 1)
+		$rtable[node] = RoutingInfo.new($hostname, node, node, 1)
 		return true
 	end
 end
@@ -103,29 +110,21 @@ def listeningloop()
 				$socketInputBuf[client] = ""
 			}
 			
-			cmd = arr[1]
+			cmd = arr[0]
+			node = arr[1]
+			srcIP = arr[2]
+
 			args = arr[2..-1]
 			case cmd
 			when "EDGEB"
-				if(addtotable(cmd))
+				if(addtotable(node))
 					str = "ENTRYADDED " << $hostname
-					clientSocket = TCPSocket.new(arr[2], $port)
+					clientSocket = TCPSocket.new(srcIP, $port)
 					clientSocket.write(str)
 				end
 			else client.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
 		end
-	end
-end
-
-def ackedgeb(args)
-	Thread.new{finalize(args)} 
-end
-
-def finalize(cmd)
-	if(addtotable(cmd))
-		#TODO send acknowledgement back?
-	else client.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 	end
 end
 
@@ -191,9 +190,6 @@ def main()
 		when "FTP"; ftp(args);
 		when "CIRCUIT"; circuit(args);
 
-		#Acknowledgements
-		when "ENTRYADDED"; ackedgeb(args)
-
 		else STDERR.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 		end
 	end
@@ -203,11 +199,6 @@ end
 def setup(hostname, port, nodes, config)
 	$hostname = hostname #this is the SRC node
 	$port = port
-
-	$socketToNode = {} #Hashmap to index node by socket
-	$rtable = {} #Hashmap to routing info by index node
-	$socketInputBuf = {} #Hashmap to index input buffers by socket
-	$nodeToPort = {} #Hashmap of node to port
 
 	$semaphore = Mutex.new
 
@@ -224,7 +215,10 @@ def setup(hostname, port, nodes, config)
 	end
 
 	#set up ports, server, buffers
-	$BUF_SIZE = 1023
+	$socketToNode = {} #Hashmap to index node by socket
+	$rtable = {} #Hashmap to routing info by index node
+	$socketInputBuf = {} #Hashmap to index input buffers by socket
+	$nodeToPort = {} #Hashmap of node to port
 
 	Thread.new{listeningloop()}
 	Thread.new{receivingloop()}
