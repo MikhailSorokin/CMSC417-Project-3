@@ -31,9 +31,8 @@ def edgeb(cmd)
 
 	clientSocket = TCPSocket.new(destIP, $nodeToPort[destNode])
 	#Open connection towards destination IP from source)
-	$socketToNode[clientSocket] = $hostname 
-	$socketBuf[destNode] = ""
-    Thread.new{msgHandler(srcIP, destIP, destNode)}
+	newmsg = "APPLYEDGE" << " " << destNode
+	$socketBuf[clientSocket] = "" << newmsg
 end
 
 def dumptable(cmd)
@@ -47,7 +46,7 @@ end
 def shutdown(cmd)
 	#Create a connection for each TCP Socket again
 	STDOUT.flush
-	$socketToNode.each_key do |socket, node|
+	$socketsArray.each do |socket|
 		socket.close
 	end
 	exit(0)
@@ -55,15 +54,21 @@ end
 
 # ----------------------- Loops methods -----------------------#
 def listeningloop()
+	STDOUT.puts "LISTENING"
 	$server = TCPServer.new $port
 	loop do
-		Thread.fork($server.accept)
+		Thread.fork($server.accept) do |clientSocket|
+			STDOUT.puts "LISTENING TO NEW CLIENT"
+			$socketsArray.push[clientSocket]
+		end
 	end
 end
 
 def receivingloop()
+	STDOUT.puts "RECEIVING"
 	loop do
-		$socketToNode.each do |servSocket, node|
+		$socketsArray.each do |servSocket|
+			STDOUT.puts "RECEIVING SOME MESSAGE"
 		  	ready = IO.select([servSocket])
     		readable = ready[0] #0 is sockets for reading
 
@@ -74,7 +79,7 @@ def receivingloop()
 	                    STDERR.puts "The connection is dead. Try again. Exit."
 	                    exit(1)
 	                else
-						socketBuf[socket] << buf
+						$socketBuf[socket] << buf
 	                end
 	            end
             end
@@ -83,15 +88,17 @@ def receivingloop()
 end
 
 #Need to parse messages and clear buffer as messages are read
-def msgHandler(srcIP, destIP, clientNode)
+def msgHandler()
+	STDOUT.puts "WRITING"
 	loop do
 		$socketBuf.each do |socket, str|
+			STDOUT.puts "WRITING INSIDE"
 			args = split(str, " ")
 			cmd = args[0]
-			destNode = args[3]
+			destNode = args[1]
 			case (cmd)		
 			#Acknowledgements
-			when "EDGEB"; handleEntryAdd(socket,destNode, str)
+			when "APPLYEDGE"; handleEntryAdd(socket,destNode)
 			else STDERR.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
 		end
@@ -99,15 +106,15 @@ def msgHandler(srcIP, destIP, clientNode)
 end
 	
 # - Helpers to add stuff to tables
-def handleEntryAdd(socket, destNode, str)
+def handleEntryAdd(socket, destNode)
 	if(!addtotable(destNode))
-		STDERR.puts "ERROR: INVALID ACKNOWLEDGEMENT \"#{args}\""
-	else 
-		socket.sendmsg("EDGEB " << $hostname << " ")
+		STDERR.puts "ERROR: INVALID ACKNOWLEDGEMENT"
 	end
+	socket.sendmsg("APPLYEDGE" << " " << $hostname)
 end
 
 def addtotable(node)
+			STDOUT.puts "ADDING NODE"
 	# You know, I'm not sure this is even necessary. I think we could assume that addtotable is only called on new destinations.
 	if $rtable.has_key?(node)
 		return false
@@ -190,7 +197,7 @@ def setup(hostname, port, nodes, config)
 	#$semaphore = Mutex.new
 
 	#set up ports, server, buffers
-	$socketToNode = {} #Hashmap to index node by socket
+	$socketsArray = [] #Array of sockets
 	$rtable = {} #Hashmap to routing info by index node
 	$socketBuf = {} #Hashmap to index input buffers by socket
 	$nodeToPort = {} #Hashmap of node to port
@@ -209,6 +216,7 @@ def setup(hostname, port, nodes, config)
 
 	Thread.new{listeningloop()}
 	Thread.new{receivingloop()}
+	Thread.new{msgHandler()}
 	main()
 end
 
