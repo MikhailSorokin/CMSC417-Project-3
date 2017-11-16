@@ -32,13 +32,14 @@ def edgeb(cmd)
     #Another thread for receiving
 	#Open connection towards destination IP from source
 	$semaphore.synchronize {
-		$socketToNode[destNode] = TCPSocket.new(destIP, $nodeToPort[destNode])
+		client = TCPSocket.new(destIP, $nodeToPort[destNode])
+		$socketToNode[client] = destNode 
 		$socketInputBuf[destNode] = ""
 	}
-    Thread.new{sendEdge(clientSocket, destNode, srcIP)}
+    Thread.new{sendEdge(clientSocket, srcIP)}
 end
 
-def sendEdge(clientSocket, destNode, srcIP)
+def sendEdge(clientSocket, srcIP)
 	str = " EDGEB " << $hostname << " " << srcIP
 	clientSocket.puts str
 	clientSocket.flush
@@ -47,7 +48,7 @@ end
 
 def dumptable(cmd)
 	$rtable.each do |entry|
-		puts entry
+		STDOUT.puts entry
 	end
 end
 
@@ -57,8 +58,8 @@ def receivingloop()
 			$socketToNode.each do |socket, node|
 				if(socket.ready?)
 
-					#socketInputBuf[socket] << socket.gets()
-					line = client.gets()
+					socketInputBuf[socket] << socket.gets()
+					line = socketInputBuf[socket]
 					args = split(line, " ")
 					cmd = args[0]
 					case (cmd)
@@ -100,7 +101,7 @@ def shutdown(cmd)
 	#Create a connection for each TCP Socket again
 	STDOUT.flush
 	$semaphore.synchronize {
-		$socketToNode.each do |socket, node|
+		$socketToNode.each_key do |socket, node|
 			socket.close
 		end
 	}
@@ -127,15 +128,15 @@ def listeningloop()
 			line = line.strip()
 			arr = line.split(' ')
 
-			$semaphore.synchronize {
-				$socketToNode[client] = arr[1]
-				$socketInputBuf[client] = ""
-			}
-			
 			cmd = arr[0]
 			node = arr[1]
 			srcIP = arr[2]
 
+			$semaphore.synchronize {
+				$socketToNode[client] = node
+				$socketInputBuf[client] = ""
+			}
+		
 			case cmd
 			when "EDGEB"
 				if(addtotable(node))
