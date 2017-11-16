@@ -32,15 +32,17 @@ def edgeb(cmd)
 
     #Another thread for receiving
 	#Open connection towards destination IP from source
-	$socketToNode[destNode] = TCPSocket.new(destIP, $nodeToPort[destNode])
-	$socketInputBuf[destNode] = ""
-	$socketOutputBuf[destNode] = ""
-    Thread.new{sendLoop(clientSocket, destNode, srcIP)}
+	$semaphore.synchronize {
+		$socketToNode[destNode] = TCPSocket.new(destIP, $nodeToPort[destNode])
+		$socketInputBuf[destNode] = ""
+	}
+    Thread.new{sendEdge(clientSocket, destNode, srcIP)}
 end
 
-def sendLoop(clientSocket, destNode, srcIP)
-	str = "EDGEB " << destNode << " " << srcIP
+def sendEdge(clientSocket, destNode, srcIP)
+	str = "" << $hostname << " EDGEB " << destNode << " " << srcIP
 	clientSocket.puts str
+	clientSocket.flush
 end
 	
 
@@ -52,20 +54,24 @@ end
 
 def receivingloop()
 	loop do
-		$socketToNode.each do |client|
-			if(client.ready?)
-				socketInputBuf[client] << client.gets()
+		$semaphore.synchronize {
+			$socketToNode.each do |socket, node|
+				if(socket.ready?)
+					socketInputBuf[socket] << socket.gets()
+				end
 			end
-		end
+		}
 	end
 end
 
 def shutdown(cmd)
 	#Create a connection for each TCP Socket again
-
-	$socketToNode.each do |client|
-		client.close
-	end
+	STDOUT.flush
+	$semaphore.synchronize {
+		$socketToNode.each do |socket, node|
+			socket.close
+		end
+	}
 	exit(0)
 end
 
@@ -91,8 +97,14 @@ def listeningloop()
 			line = client.gets()
 			line = line.strip()
 			arr = line.split(' ')
-			cmd = arr[0]
-			args = arr[1..-1]
+
+			$semaphore.synchronize {
+				$socketToNode[client] = arr[0]
+				$socketInputBuf[client] = ""
+			}
+			
+			cmd = arr[1]
+			args = arr[2..-1]
 			case cmd
 			when "EDGEB"
 				if(addtotable(cmd))
@@ -102,8 +114,6 @@ def listeningloop()
 				end
 			else client.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
-			# I think we might have to keep the connection open until shutdown, but maybe that won't make a difference until later parts
-			client.close
 		end
 	end
 end
@@ -194,6 +204,13 @@ def setup(hostname, port, nodes, config)
 	$hostname = hostname #this is the SRC node
 	$port = port
 
+	$socketToNode = {} #Hashmap to index node by socket
+	$rtable = {} #Hashmap to routing info by index node
+	$socketInputBuf = {} #Hashmap to index input buffers by socket
+	$nodeToPort = {} #Hashmap of node to port
+
+	$semaphore = Mutex.new
+
 	File.open(nodes, "r") do |f|
 		f.each_line do |line|
 			line = line.strip()
@@ -208,12 +225,6 @@ def setup(hostname, port, nodes, config)
 
 	#set up ports, server, buffers
 	$BUF_SIZE = 1023
-
-	$socketToNode = {} #Hashmap to index node by socket
-	$nodeToPort = {} #Hashmap of node to port
-	$rtable = {} #Hashmap to routing info by index node
-	$socketInputBuf = {} #Hashmap to index input buffers by socket
-	$socketOutputBuf = {} #Hashmap to index output buffers by socket
 
 	Thread.new{listeningloop()}
 	Thread.new{receivingloop()}
