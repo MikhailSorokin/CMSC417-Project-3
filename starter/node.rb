@@ -32,15 +32,14 @@ def edgeb(cmd)
 
     #Another thread for receiving
 	#Open connection towards destination IP from source
-	$socketToNode[destNode] = TCPSocket.new(destIP, $port)
+	$socketToNode[destNode] = TCPSocket.new(destIP, $nodeToPort[destNode])
 	$socketInputBuf[destNode] = ""
 	$socketOutputBuf[destNode] = ""
-	clientSocket = 
-    Thread.new{sendLoop(clientSocket, destNode, destIP)}
+    Thread.new{sendLoop(clientSocket, destNode, srcIP)}
 end
 
-def sendLoop(clientSocket, destNode, destIP)
-	str = "EDGEB " << destNode << " " << destIP
+def sendLoop(clientSocket, destNode, srcIP)
+	str = "EDGEB " << destNode << " " << srcIP
 	clientSocket.puts str
 end
 	
@@ -72,7 +71,6 @@ end
 
 def addtotable(cmd)
 	#Parse
-	puts "AHH"
 	destNode = cmd[1]
 
 	# You know, I'm not sure this is even necessary. I think we could assume that addtotable is only called on new destinations.
@@ -200,7 +198,11 @@ def setup(hostname, port, nodes, config)
 		f.each_line do |line|
 			line = line.strip()
 			arr = line.split(',')
+
 			# Assign values to a hashmap
+			nodeName = arr[0]
+			portNum = arr[1]
+			nodeToPort[nodeName] = portNum
 		end
 	end
 
@@ -208,11 +210,13 @@ def setup(hostname, port, nodes, config)
 	$BUF_SIZE = 1023
 
 	$socketToNode = {} #Hashmap to index node by socket
+	$nodeToPort = {} #Hashmap of node to port
 	$rtable = {} #Hashmap to routing info by index node
 	$socketInputBuf = {} #Hashmap to index input buffers by socket
 	$socketOutputBuf = {} #Hashmap to index output buffers by socket
 
 	Thread.new{listeningloop()}
+	Thread.new{receivingloop()}
 	main()
 end
 
