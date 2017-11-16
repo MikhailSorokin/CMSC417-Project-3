@@ -47,9 +47,11 @@ end
 	
 
 def dumptable(cmd)
+	out_file = File.new(cmd[0], "w+")
 	$rtable.each do |entry|
-		STDOUT.puts entry
+		out_file.puts("#{entry}")
 	end
+	out_file.close
 end
 
 def receivingloop()
