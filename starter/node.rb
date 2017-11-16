@@ -32,7 +32,10 @@ def edgeb(cmd)
 
     #Another thread for receiving
 	#Open connection towards destination IP from source
-	clientSocket = TCPSocket.new(srcIP, $port)
+	$socketToNode[destNode] = TCPSocket.new(destIP, $port)
+	$socketInputBuf[destNode] = ""
+	$socketOutputBuf[destNode] = ""
+	clientSocket = 
     Thread.new{sendLoop(clientSocket, destNode, destIP)}
 end
 
@@ -192,6 +195,14 @@ end
 def setup(hostname, port, nodes, config)
 	$hostname = hostname #this is the SRC node
 	$port = port
+
+	File.open(nodes, "r") do |f|
+		f.each_line do |line|
+			line = line.strip()
+			arr = line.split(',')
+			# Assign values to a hashmap
+		end
+	end
 
 	#set up ports, server, buffers
 	$BUF_SIZE = 1023
