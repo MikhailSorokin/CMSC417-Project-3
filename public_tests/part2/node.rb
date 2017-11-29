@@ -1,5 +1,4 @@
-require 'socket' #Required import to allow server connection 
-require 'io/wait' #Using ready? method to see if data available in each socket
+require_relative 'loophelpers'
 
 $port = nil
 $hostname = nil
@@ -40,105 +39,52 @@ def dumptable(cmd)
 	$rtable.each do |node, entry|
 		out_file.puts("#{entry}")
 	end
+
+	#TODO - not outputting new lines for some reason
 	out_file.close
 end
 
 def shutdown(cmd)
 	#Create a connection for each TCP Socket again
 	STDOUT.flush
-	$semaphore.synchronize {
+	#$semaphore.synchronize {
 		$socketsArray.each do |socket|
 			socket.close
 		end
-	}
+	#}
 	exit(0)
-end
-
-# ----------------------- Loops methods -----------------------#
-def listeningloop()
-	STDOUT.puts "LISTENING"
-	$server = TCPServer.new $port
-	loop do
-		Thread.fork($server.accept) do |clientSocket|
-			$socketsArray.push(clientSocket)
-		end
-	end
-end
-
-def receivingloop()
-	STDOUT.puts "RECEIVING"
-	loop do
-		$socketsArray.each do |servSocket|
-		  	ready = IO.select([servSocket])
-    		readable = ready[0] #0 is sockets for reading
-
-    		readable.each do |socket|
-	            if socket == servSocket
-	                buf = socket.recv(1024)
-	                if buf.length == 0
-	                    STDOUT.puts "The connection is dead. Try again. Exit."
-	                    exit(1)
-	                else
-            			$semaphore.synchronize {
-							$socketBuf[socket] = buf
-						}
-	                end
-	            end
-            end
-		end
-	end
-end
-
-#Need to parse messages and clear buffer as messages are read
-def msgHandler()
-	STDOUT.puts "WRITING"
-	loop do
-		$semaphore.synchronize {
-			$socketBuf.each do |socket, str|
-				str = str.strip()
-				args = str.split(" ")
-				cmd = args[0]
-				destNode = args[1]
-				case (cmd)		
-				#Acknowledgements
-				when "APPLYEDGE"; handleEntryAdd(socket,destNode)
-				else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
-				end
-			end
-		}
-	end
-end
-	
-# - Helpers to add stuff to tables
-def handleEntryAdd(socket, destNode)
-	if(!addtotable(destNode))
-		STDERR.puts "ERROR: INVALID ACKNOWLEDGEMENT"
-	end
-	socket.write("APPLYEDGE" << " " << $hostname)
-	$socketBuf.clear
-end
-
-def addtotable(node)
-	# You know, I'm not sure this is even necessary. I think we could assume that addtotable is only called on new destinations.
-	if $rtable.has_key?(node)
-		return false
-	else
-		$rtable[node] = RoutingInfo.new($hostname, node, node, 1)
-		return true
-	end
 end
 
 # --------------------- Part 2 --------------------- # 
 def edged(cmd)
-	STDOUT.puts "EDGED: not implemented"
+	if cmd.length < 1
+		STDOUT.puts "Not enough arguments"		
+	end
+
+	#Parse
+	destNode = cmd[0]
+
+	#Delete the node locally
+	handleEntryDelete(destNode)
+
+	#TODO - Connection needs to end here
 end
 
-def edgeu(cmd)
-	STDOUT.puts "EDGEu: not implemented"
+def edgeU(cmd)
+	if cmd.length < 2
+		STDOUT.puts "Not enough arguments"		
+	end
+
+	#Parse
+	destNode = cmd[0]
+	cost = cmd[1]
+
+	#Update the node locally
+	handleEntryUpdate(destNode, cost)
 end
 
 def status()
-	STDOUT.puts "STATUS: not implemented"
+	STDOUT.puts "Not implemented son"
 end
 
 
@@ -217,6 +163,33 @@ def setup(hostname, port, nodes, config)
 			$nodeToPort[nodeName] = portNum
 		end
 	end
+
+	$updateInterval = nil
+	$maxPayload = nil
+	$pingTimeout = nil
+
+	num = 0
+	File.open(config, "r") do |f|
+		f.each_line do |line|
+			line = line.strip()
+			arr = line.split('=')
+
+			# Assign values from specific things
+			value = arr[1]
+
+			if num == 0
+				$updateInterval = value
+			elsif num == 1
+				$maxPayload = value
+			elsif num == 2
+				$pingTimeout = value
+			end
+
+			num = num + 1
+		end
+	end
+
+	#TODO - Put timer thread here
 
 	Thread.new{listeningloop()}
 	Thread.new{receivingloop()}
