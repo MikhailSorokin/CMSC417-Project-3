@@ -58,7 +58,7 @@ def msgHandler()
 	end
 end
 	
-# ---------------------------------- Helpers to add stuff to tables ----------------------- $
+# -------------- Helpers to do stuff to tables ----------------------- $
 def handleEntryAdd(socket, destNode)
 	if(!addtotable(destNode))
 		STDOUT.puts "ERROR: INVALID ACKNOWLEDGEMENT"
