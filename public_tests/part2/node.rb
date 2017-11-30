@@ -1,4 +1,4 @@
-require_relative 'loophelpers'
+require_relative 'node_helpers'
 
 $port = nil
 $hostname = nil
@@ -31,7 +31,7 @@ def edgeb(cmd)
 	clientSocket = TCPSocket.new(destIP, $nodeToPort[destNode])
 	#Open connection towards destination IP from source)
 	newmsg = "APPLYEDGE" << " " << destNode
-	$socketBuf[clientSocket] = newmsg
+	$internalMsgQueue.push(new message(clientSocket, newmsg)
 end
 
 def dumptable(cmd)
@@ -189,7 +189,18 @@ def setup(hostname, port, nodes, config)
 		end
 	end
 
-	#TODO - Put timer thread here
+	$clock_val = Time.now().to_i()
+	$update_time = $clock_val + $updateInterval
+	
+	t = Thread.new(){
+	while(true)
+	   sleep(1)
+	   $clock_val = $clock_val + 1
+	end
+	 
+	}
+	
+	$internalMsgQueue = Queue.new
 
 	Thread.new{listeningloop()}
 	Thread.new{receivingloop()}
