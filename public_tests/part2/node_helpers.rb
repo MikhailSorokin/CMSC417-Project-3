@@ -1,10 +1,19 @@
 require 'socket' #Required import to allow server connection 
+require 'thread'
 
 $port = nil
 $hostname = nil
 $server = nil
 
 # ----------------------- Loop methods -----------------------#
+class message
+	attr_accessor :socket, :msg
+	def initialize(socket, msg)
+		@socket = socket
+		@msg = msg
+	end
+end
+
 def listeningloop()
 	STDOUT.puts "LISTENING"
 	$server = TCPServer.new $port
@@ -42,19 +51,22 @@ end
 def msgHandler()
 	loop do
 		$semaphore.synchronize {
-			$socketBuf.each do |socket, str|
-				str = str.strip()
-				args = str.split(" ")
-				cmd = args[0]
-				destNode = args[1]
-				case (cmd)		
-				#Acknowledgements
-				when "APPLYEDGE"; handleEntryAdd(socket,destNode)
-				else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
-				end
+			incoming = $internalMsgQueue.pop
+			str = incoming.str.strip()
+			args = str.split(" ")
+			cmd = args[0]
+			case (cmd)		
+			#Acknowledgements
+			when "APPLYEDGE"; handleEntryAdd(socket,args[1])
+			when "LSA";
+			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
 		}
-
+		
+		if($clock_val > $update_time)
+			$update_time = $clock_val + $updateInterval
+			
+		end
 	end
 end
 	
