@@ -14,6 +14,23 @@ class message
 	end
 end
 
+class neighbor
+	attr_accessor :name, :socket, :cost
+	def initilaize(name, socket, cost)
+		@name = name
+		@socket = socket
+		@cost = cost
+	end
+	
+	def ==(other)
+		self.name == other
+	end
+	
+	def to_s
+		"#{name},#{cost}"
+	end
+end
+
 def listeningloop()
 	STDOUT.puts "LISTENING"
 	$server = TCPServer.new $port
@@ -50,18 +67,16 @@ end
 #Need to parse messages and clear buffer as messages are read
 def msgHandler()
 	loop do
-		$semaphore.synchronize {
-			incoming = $internalMsgQueue.pop
-			str = incoming.str.strip()
-			args = str.split(" ")
-			cmd = args[0]
-			case (cmd)		
-			#Acknowledgements
-			when "APPLYEDGE"; handleEntryAdd(socket,args[1])
-			when "LSA";
-			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
-			end
-		}
+		incoming = $internalMsgQueue.pop
+		str = incoming.str.strip()
+		args = str.split(" ")
+		cmd = args[0]
+		case (cmd)		
+		#Acknowledgements
+		when "APPLYEDGE"; handleEntryAdd(socket,args[1])
+		when "LSA";
+		else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
+		end
 		
 		if($clock_val > $update_time)
 			$update_time = $clock_val + $updateInterval
@@ -72,40 +87,13 @@ end
 	
 # -------------- Helpers to do stuff to tables ----------------------- $
 def handleEntryAdd(socket, destNode)
-	if(!addtotable(destNode))
-		STDOUT.puts "ERROR: INVALID ACKNOWLEDGEMENT"
-	end
+	$neighbors.push(new neighbor(destNode, socket, 1))
 	socket.write("APPLYEDGE" << " " << $hostname)
-
-	#TODO - Need to fix this
-	$socketBuf.delete(socket)
-end
-
-def addtotable(node)
-	# You know, I'm not sure this is even necessary. I think we could assume that addtotable is only called on new destinations.
-	if $rtable.has_key?(node)
-		return false
-	else
-		$rtable[node] = RoutingInfo.new($hostname, node, node, 1)
-		return true
-	end
 end
 
 # Handles deleting entries from the table - ASYMMETRIC
 def handleEntryDelete(destNode)
-	if(!deleteFromTable(destNode))
-		STDOUT.puts "ERROR: INVALID ACKNOWLEDGEMENT"
-	end
-end
-
-def deleteFromTable(node)
-	#Only delete one way
-	if $rtable.has_key?(node)
-		$rtable.delete(node)
-		return true
-	else
-		return false
-	end
+	$neighbors.delete_if {|n| n.name == destNode}
 end
 
 #Handles updating edge costs on the table
