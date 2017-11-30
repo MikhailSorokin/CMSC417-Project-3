@@ -66,7 +66,7 @@ def handleEntryAdd(socket, destNode)
 	socket.write("APPLYEDGE" << " " << $hostname)
 
 	#TODO - Need to fix this
-	$socketBuf.clear
+	$socketBuf.delete(socket)
 end
 
 def addtotable(node)
