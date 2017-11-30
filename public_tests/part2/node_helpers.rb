@@ -16,7 +16,7 @@ end
 
 class neighbor
 	attr_accessor :name, :socket, :cost
-	def initilaize(name, socket, cost)
+	def initialize(name, socket, cost)
 		@name = name
 		@socket = socket
 		@cost = cost
@@ -67,21 +67,65 @@ end
 #Need to parse messages and clear buffer as messages are read
 def msgHandler()
 	loop do
-		incoming = $internalMsgQueue.pop
-		str = incoming.str.strip()
-		args = str.split(" ")
-		cmd = args[0]
-		case (cmd)		
-		#Acknowledgements
-		when "APPLYEDGE"; handleEntryAdd(socket,args[1])
-		when "LSA";
-		else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
+		if $internalMsgQueue.empty? != nil
+			incoming = $internalMsgQueue.pop
+			str = incoming.str.strip()
+			args = str.split(" ")
+			cmd = args[0]
+			case (cmd)		
+			#Acknowledgements
+			when "APPLYEDGE"; handleEntryAdd(socket,args[1])
+			when "LSA";
+			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
+			end
+			
+			if($clock_val > $update_time)
+				$update_time = $clock_val + $updateInterval
+				
+				performDijkstra()
+			end
+		end
+	end
+end
+
+#DIJKSTRA
+def performDijkstra()
+	#We have the neighbors, so just initialize all distances to Infinity
+	nodesToDistance = {}
+
+	nodeQueue = []
+
+	$neighbors.each |neighbor|
+		nodesToDistance[neighbor] = Float::INFINITY
+		nodeQueue.push(neighbor)
+	end
+
+	nodesToDistance[$hostname] = 0
+	nodeQueue.push($hostname)
+
+	while nodeQueue.empty? != nil
+		#now use the neighbors array to see what is min distance
+		minCost = Float::INFINITY
+		vertexToRemove = nil
+
+		nodesToDistance.each |node, cost|
+			if cost <= minCost
+				minCost = cost
+				vertexToRemove = node
+			end
+		end
+
+		currentVertex = nodeQueue.remove(vertexToRemove)
+
+		nodeQueue.each |neighborNode|
+			currDist = currentVertex + $neighbors[neighborNode].cost
+
+			if currDist < $neighbors[neighborNode].cost
+				nodesToDistance[neighborNode] = currDist
+				#TODO - Path
+			end
 		end
 		
-		if($clock_val > $update_time)
-			$update_time = $clock_val + $updateInterval
-			
-		end
 	end
 end
 	
@@ -105,10 +149,5 @@ end
 
 def canUpdateTable(node, newcost)
 	#Only update one way
-	if $rtable.has_key?(node)
-		$rtable[node].distance = newcost
-		return true
-	else
-		return false
-	end
+	$neighbors[node].cost = newcost
 end
