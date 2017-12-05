@@ -1,0 +1,17 @@
+TODO - Mike
+
+Fix dijkstra using the nodes in Nodes.txt file.
+Make GraphInfo data structure, which stores a hashmap of node names to its neighbors.
+Make a GraphEntry class that is correspondent of a two-element array, storing the sequence number and the neighbor array.
+Then, create a LSA Message that will be driven as the following - 
+"Name Seq# ["NeighborA.to_s(), "NeighborB.to_s()", ..., "NeighborZ.to_s()"
+
+Send and receive LSA messages and update Dijkstra accordingly.
+
+Then create a new Neighbor that takes in a string and replaces the current graph info key to value map pairing with one that parses the string and sets the costs to the message that was given.
+
+Fix the edgeb, edgeu and edge d to be dealt acordingly
+
+Figure out how to accept multiple neighbors if still an issue after doing all the above. 
+
+Make public tests.

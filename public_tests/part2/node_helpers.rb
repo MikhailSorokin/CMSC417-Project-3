@@ -6,30 +6,6 @@ $hostname = nil
 $server = nil
 
 # ----------------------- Loop methods -----------------------#
-class message
-	attr_accessor :socket, :msg
-	def initialize(socket, msg)
-		@socket = socket
-		@msg = msg
-	end
-end
-
-class neighbor
-	attr_accessor :name, :socket, :cost
-	def initialize(name, socket, cost)
-		@name = name
-		@socket = socket
-		@cost = cost
-	end
-	
-	def ==(other)
-		self.name == other
-	end
-	
-	def to_s
-		"#{name},#{cost}"
-	end
-end
 
 def listeningloop()
 	STDOUT.puts "LISTENING"
@@ -95,7 +71,7 @@ def performDijkstra()
 
 	nodeQueue = []
 
-	$neighbors.each |neighbor|
+	$neighbors.each do |neighbor|
 		nodesToDistance[neighbor] = Float::INFINITY
 		nodeQueue.push(neighbor)
 	end
@@ -108,7 +84,7 @@ def performDijkstra()
 		minCost = Float::INFINITY
 		vertexToRemove = nil
 
-		nodesToDistance.each |node, cost|
+		nodesToDistance.each do |node, cost|
 			if cost <= minCost
 				minCost = cost
 				vertexToRemove = node
@@ -117,21 +93,20 @@ def performDijkstra()
 
 		currentVertex = nodeQueue.remove(vertexToRemove)
 
-		nodeQueue.each |neighborNode|
+		nodeQueue.each do |neighborNode|
 			currDist = currentVertex + $neighbors[neighborNode].cost
 
 			if currDist < $neighbors[neighborNode].cost
 				nodesToDistance[neighborNode] = currDist
 				#TODO - Path
 			end
-		end
-		
+		end	
 	end
 end
 	
 # -------------- Helpers to do stuff to tables ----------------------- $
 def handleEntryAdd(socket, destNode)
-	$neighbors.push(new neighbor(destNode, socket, 1))
+	$neighbors.push(Neighbor.new(destNode, socket, 1))
 	socket.write("APPLYEDGE" << " " << $hostname)
 end
 

@@ -4,7 +4,33 @@ $port = nil
 $hostname = nil
 $server = nil
 
-# --------------------- Part 1 --------------------- # 
+# --------------------- General Classes ------------ #
+
+class Message
+	attr_accessor :socket, :msg
+	def initialize(socket, msg)
+		@socket = socket
+		@msg = msg
+	end
+end
+
+class Neighbor
+	attr_accessor :name, :socket, :cost
+	def initialize(name, socket, cost)
+		@name = name
+		@socket = socket
+		@cost = cost
+	end
+	
+	def ==(other)
+		self.name == other
+	end
+	
+	def to_s
+		"#{name},#{cost}"
+	end
+end
+
 class RoutingInfo
 	attr_accessor :src, :dst, :nextHop, :distance
 	def initialize(src, dst, nextHop, distance)
@@ -17,6 +43,8 @@ class RoutingInfo
 		"#{src},#{dst},#{nextHop},#{distance}"
 	end
 end
+
+# --------------------- Part 1 --------------------- # 
 
 def edgeb(cmd)
 	if cmd.length < 3
@@ -31,7 +59,7 @@ def edgeb(cmd)
 	clientSocket = TCPSocket.new(destIP, $nodeToPort[destNode])
 	#Open connection towards destination IP from source)
 	newmsg = "APPLYEDGE" << " " << destNode
-	$internalMsgQueue.push(new message(clientSocket, newmsg)
+	$internalMsgQueue.push(Message.new(clientSocket, newmsg))
 end
 
 def dumptable(cmd)
@@ -150,7 +178,7 @@ def setup(hostname, port, nodes, config)
 	$socketsArray = [] #Array of sockets
 	$rtable = {} #Hashmap to routing info by index node
 	$socketBuf = {} #Hashmap to index input buffers by socket
-	$nodeToPort = {} #Hashmap of node to port
+	$nodeToPort = {} #Hashmap of node to port, gotten from the NODES.txt file
 
 	File.open(nodes, "r") do |f|
 		f.each_line do |line|
@@ -174,15 +202,15 @@ def setup(hostname, port, nodes, config)
 			line = line.strip()
 			arr = line.split('=')
 
-			# Assign values from specific things
+			# Assign values from values in the config file - Mike
 			value = arr[1]
 
 			if num == 0
-				$updateInterval = value
+				$updateInterval = value.to_i()
 			elsif num == 1
-				$maxPayload = value
+				$maxPayload = value.to_i()
 			elsif num == 2
-				$pingTimeout = value
+				$pingTimeout = value.to_i()
 			end
 
 			num = num + 1
@@ -192,6 +220,8 @@ def setup(hostname, port, nodes, config)
 	$clock_val = Time.now().to_i()
 	$update_time = $clock_val + $updateInterval
 	
+	#A timer loop that updates the current clock and is used to synchronize updates
+	#between nodes - Mike
 	t = Thread.new(){
 	while(true)
 	   sleep(1)
