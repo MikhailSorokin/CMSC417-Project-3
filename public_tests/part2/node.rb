@@ -31,7 +31,7 @@ def edgeb(cmd)
 	clientSocket = TCPSocket.new(destIP, $nodeToPort[destNode])
 	#Open connection towards destination IP from source)
 	newmsg = "APPLYEDGE" << " " << destNode
-	$internalMsgQueue.push(new message(clientSocket, newmsg)
+	$internalMsgQueue.push(new message(clientSocket, newmsg))
 end
 
 def dumptable(cmd)
@@ -70,7 +70,7 @@ def edged(cmd)
 	#TODO - Connection needs to end here
 end
 
-def edgeU(cmd)
+def edgeu(cmd)
 	if cmd.length < 2
 		STDOUT.puts "Not enough arguments"		
 	end
@@ -84,7 +84,16 @@ def edgeU(cmd)
 end
 
 def status()
-	STDOUT.puts "Not implemented son"
+	out_file.puts "Name: #{$hostname}"
+	out_file.puts "Port: #{$portNum}"
+	neighbornames = Array.new
+	$neighbors.each do |n|
+		neighbornames.push(n.name)
+	end
+	out_file.print "Neighbors: "
+	neighbornames.sort.each do |n|
+		out_file.print(n)
+	end
 end
 
 
