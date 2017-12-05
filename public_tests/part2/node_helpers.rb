@@ -6,7 +6,7 @@ $hostname = nil
 $server = nil
 
 # ----------------------- Loop methods -----------------------#
-class message
+class Message
 	attr_accessor :socket, :msg
 	def initialize(socket, msg)
 		@socket = socket
@@ -14,7 +14,7 @@ class message
 	end
 end
 
-class neighbor
+class Neighbor
 	attr_accessor :name, :socket, :cost
 	def initialize(name, socket, cost)
 		@name = name
@@ -67,23 +67,21 @@ end
 #Need to parse messages and clear buffer as messages are read
 def msgHandler()
 	loop do
-		if $internalMsgQueue.empty? != nil
-			incoming = $internalMsgQueue.pop
-			str = incoming.str.strip()
-			args = str.split(" ")
-			cmd = args[0]
-			case (cmd)		
-			#Acknowledgements
-			when "APPLYEDGE"; handleEntryAdd(socket,args[1])
-			when "LSA";
-			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
-			end
+		incoming = $internalMsgQueue.pop
+		str = incoming.str.strip()
+		args = str.split(" ")
+		cmd = args[0]
+		case (cmd)		
+		#Acknowledgements
+		when "APPLYEDGE"; handleEntryAdd(socket,args[1])
+		when "LSA";
+		else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
+		end
+		
+		if($clock_val > $update_time)
+			$update_time = $clock_val + $updateInterval
 			
-			if($clock_val > $update_time)
-				$update_time = $clock_val + $updateInterval
-				
-				performDijkstra()
-			end
+			performDijkstra()
 		end
 	end
 end
@@ -125,13 +123,13 @@ def performDijkstra()
 				#TODO - Path
 			end
 		end
-		
 	end
 end
 	
-# -------------- Helpers to do stuff to tables ----------------------- $
+	
+# -------------- Helpers to do stuff to neighbors ----------------------- $
 def handleEntryAdd(socket, destNode)
-	$neighbors.push(new neighbor(destNode, socket, 1))
+	$neighbors.push(new Neighbor(destNode, socket, 1))
 	socket.write("APPLYEDGE" << " " << $hostname)
 end
 
@@ -142,12 +140,6 @@ end
 
 #Handles updating edge costs on the table
 def handleEntryUpdate(destNode, newcost)
-	if(!canUpdateTable(destNode, newcost))
-		STDOUT.puts "ERROR: INVALID ACKNOWLEDGEMENT"
-	end
-end
-
-def canUpdateTable(node, newcost)
-	#Only update one way
-	$neighbors[node].cost = newcost
+	i = $neighbors.index(|n| n.name == destNode)
+	$neighbors[i].cost = newcost
 end
