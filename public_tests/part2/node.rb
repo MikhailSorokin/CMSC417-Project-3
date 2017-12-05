@@ -4,32 +4,7 @@ $port = nil
 $hostname = nil
 $server = nil
 
-# --------------------- General Classes ------------ #
-
-class Message
-	attr_accessor :socket, :msg
-	def initialize(socket, msg)
-		@socket = socket
-		@msg = msg
-	end
-end
-
-class Neighbor
-	attr_accessor :name, :socket, :cost
-	def initialize(name, socket, cost)
-		@name = name
-		@socket = socket
-		@cost = cost
-	end
-	
-	def ==(other)
-		self.name == other
-	end
-	
-	def to_s
-		"#{name},#{cost}"
-	end
-end
+# --------------------- Table Classes ------------ #
 
 class RoutingInfo
 	attr_accessor :src, :dst, :nextHop, :distance
@@ -59,6 +34,7 @@ def edgeb(cmd)
 	clientSocket = TCPSocket.new(destIP, $nodeToPort[destNode])
 	#Open connection towards destination IP from source)
 	newmsg = "APPLYEDGE" << " " << destNode
+
 	$internalMsgQueue.push(Message.new(clientSocket, newmsg))
 end
 
@@ -98,7 +74,7 @@ def edged(cmd)
 	#TODO - Connection needs to end here
 end
 
-def edgeU(cmd)
+def edgeu(cmd)
 	if cmd.length < 2
 		STDOUT.puts "Not enough arguments"		
 	end
@@ -112,7 +88,16 @@ def edgeU(cmd)
 end
 
 def status()
-	STDOUT.puts "Not implemented son"
+	out_file.puts "Name: #{$hostname}"
+	out_file.puts "Port: #{$portNum}"
+	neighbornames = Array.new
+	$neighbors.each do |n|
+		neighbornames.push(n.name)
+	end
+	out_file.print "Neighbors: "
+	neighbornames.sort.each do |n|
+		out_file.print(n)
+	end
 end
 
 
