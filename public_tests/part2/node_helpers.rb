@@ -3,7 +3,6 @@ require 'thread'
 
 $port = nil
 $hostname = nil
-$server = nil
 
 # ----------------------- Loop methods -----------------------#
 class Message
@@ -15,11 +14,20 @@ class Message
 end
 
 class Neighbor
-	attr_accessor :name, :socket, :cost
+	attr_accessor :name, :socket, :cost,
+	:seqNum, :neighborArray
 	def initialize(name, socket, cost)
 		@name = name
 		@socket = socket
 		@cost = cost
+	end
+
+	def initialize(name, cost, seqNum, neighborArray)
+		@name = name
+		@socket = nil
+		@cost = cost
+		@seqNum = seqNum
+		@neighborArray = neighborArray
 	end
 	
 	def ==(other)
@@ -29,21 +37,34 @@ class Neighbor
 	def to_s
 		"#{name},#{cost}"
 	end
+
+	def to_s_refined
+		message = "#{name} #{seqNum} " << "[" 
+
+		neighborArray.each do |neighbor|
+			message <<  neighbor << " "
+		end
+
+		message.join!
+
+		message << "]"
+	end
 end
 
+# ----------------- Classes ------------------ #
+
 def listeningloop()
-	STDOUT.puts "LISTENING"
 	$server = TCPServer.new $port
 	loop do
 		Thread.fork($server.accept) do |clientSocket|
-			$socketsArray.push(clientSocket)
+			$recvBuffer.push(clientSocket)
 		end
 	end
 end
 
 def receivingloop()
 	loop do
-		$socketsArray.each do |servSocket|
+		$recvBuffer.each do |servSocket|
 		  	ready = IO.select([servSocket])
     		readable = ready[0] #0 is sockets for reading
 
@@ -51,15 +72,19 @@ def receivingloop()
 	            if socket == servSocket
 	                buf = socket.recv(1024)
 	                if buf.length == 0
-	                    STDOUT.puts "The connection is dead. Try again. Exit."
+	                    STDOUT.puts "The payload exceeds 1024 bytes."
 	                    exit(1)
 	                else
             			$semaphore.synchronize {
-							$socketBuf[socket] = buf
+							$internalMsgQueue.push(buf)
 						}
 	                end
 	            end
             end
+		end
+
+		if !$recvBuffer.empty?
+			$recvBuffer.clear
 		end
 	end
 end
@@ -67,22 +92,44 @@ end
 #Need to parse messages and clear buffer as messages are read
 def msgHandler()
 	loop do
-		incoming = $internalMsgQueue.pop
-		str = incoming.str.strip()
-		args = str.split(" ")
-		cmd = args[0]
-		case (cmd)		
-		#Acknowledgements
-		when "APPLYEDGE"; handleEntryAdd(socket,args[1])
-		when "LSA";
-		else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
+
+		if !$internalMsgQueue.empty?
+			incoming = $internalMsgQueue.pop
+			str = incoming.str.strip()
+			args = str.split(" ")
+			cmd = args[0]
+			case (cmd)		
+			#Acknowledgements
+			when "APPLYEDGE"; handleEntryAdd($socketToBuf[args[1]],args[1])
+			when "LSA"; receiveUpdatedNeighbors(args[1], args[2])
+			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
+			end
 		end
-		
+
 		if($clock_val > $update_time)
 			$update_time = $clock_val + $updateInterval
 			
 			performDijkstra()
 		end
+	end
+end
+
+def receiveUpdatedNeighbors(seqNum, strategy)
+	$graphInfo[name] = Neighbor.new(name, nil, seqNum, )
+end
+
+def createLSAMessage(name, seqNum, neighbors)
+	message = "" << name << " " seqNum << " "
+
+	neighbors.each do |neighbor|
+		message << neighbor.to_s_refined() << " "
+	end
+
+	message.chop! #Remove the last character, which will be a space
+	message << "]"
+
+	if $nodeToSocket[name] != nil
+		$nodeToSocket[name].write("LSA " << message)
 	end
 end
 
@@ -93,7 +140,7 @@ def performDijkstra()
 
 	nodeQueue = []
 
-	$neighbors.each do |neighbor|
+	$nodeToPort.each do |neighbor, port|
 		nodesToDistance[neighbor] = Float::INFINITY
 		nodeQueue.push(neighbor)
 	end
@@ -120,10 +167,14 @@ def performDijkstra()
 
 			if currDist < $neighbors[neighborNode].cost
 				nodesToDistance[neighborNode] = currDist
-				#TODO - Path
+				#TODO - Path for TraceRoute?
 			end
 		end	
+
+
+		createLSAMessage(currentVertex, $update_time)
 	end
+
 end
 	
 	
@@ -140,6 +191,6 @@ end
 
 #Handles updating edge costs on the table
 def handleEntryUpdate(destNode, newcost)
-	i = $neighbors.index(|n| n.name == destNode)
+	i = $neighbors.index{|n| n.name == destNode}
 	$neighbors[i].cost = newcost
 end

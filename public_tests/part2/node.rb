@@ -34,6 +34,7 @@ def edgeb(cmd)
 	clientSocket = TCPSocket.new(destIP, $nodeToPort[destNode])
 	#Open connection towards destination IP from source)
 	newmsg = "APPLYEDGE" << " " << destNode
+	$nodeToSocket[destNode] = clientSocket 
 
 	$internalMsgQueue.push(Message.new(clientSocket, newmsg))
 end
@@ -44,7 +45,7 @@ def dumptable(cmd)
 		out_file.puts("#{entry}")
 	end
 
-	#TODO - not outputting new lines for some reason
+	#TODO - not outputting new lines in file for some reason
 	out_file.close
 end
 
@@ -52,7 +53,7 @@ def shutdown(cmd)
 	#Create a connection for each TCP Socket again
 	STDOUT.flush
 	#$semaphore.synchronize {
-		$socketsArray.each do |socket|
+		$nodeToSocket.each do |name, socket|
 			socket.close
 		end
 	#}
@@ -71,7 +72,8 @@ def edged(cmd)
 	#Delete the node locally
 	handleEntryDelete(destNode)
 
-	#TODO - Connection needs to end here
+	#Connection needs to end here for that specific node
+	$nodeToSocket[destNode].close
 end
 
 def edgeu(cmd)
@@ -159,11 +161,20 @@ def setup(hostname, port, nodes, config)
 
 	$semaphore = Mutex.new
 
-	#set up ports, server, buffers
-	$socketsArray = [] #Array of sockets
-	$rtable = {} #Hashmap to routing info by index node
-	$socketBuf = {} #Hashmap to index input buffers by socket
+	#How to find current ports and Sockets
 	$nodeToPort = {} #Hashmap of node to port, gotten from the NODES.txt file
+	$nodeToSocket = {} #Hashmap to index socket by node
+
+	#Database
+	$rtable = {} #Hashmap to routing info by index node
+
+	#Buffers
+	$recvBuffer = {} #Hashmap to index input buffers by socket
+
+	#GraphInfo stores available node names to ITS neighbors. Used in sending
+	$graphInfo  = {}
+	$graphEntry = [[]]
+	$neighbors = []
 
 	File.open(nodes, "r") do |f|
 		f.each_line do |line|
@@ -212,7 +223,6 @@ def setup(hostname, port, nodes, config)
 	   sleep(1)
 	   $clock_val = $clock_val + 1
 	end
-	 
 	}
 	
 	$internalMsgQueue = Queue.new
