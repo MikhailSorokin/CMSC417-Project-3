@@ -35,8 +35,11 @@ def edgeb(cmd)
 	clientSocket = TCPSocket.new(destIP, $nodeToPort[destNode])
 
 	$neighbors.push(Neighbor.new(destNode, 1))
-	clientSocket.write("APPLYEDGE" << " " << $hostname)
-	$nodeToSocket[destNode] = clientSocket 
+
+	$semaphore.synchronize {
+		clientSocket.write("APPLYEDGE" << " " << $hostname)
+		$nodeToSocket[destNode] = clientSocket
+	}
 end
 
 def dumptable(cmd)
@@ -168,7 +171,7 @@ def setup(hostname, port, nodes, config)
 	$rtable = {} #Hashmap to routing info by index node
 
 	#Buffers
-	$recvBuffer = {} #Hashmap to index input buffers by socket
+	$recvBuffer = [] #Hashmap to index input buffers by socket
 
 	#GraphInfo stores available node names to ITS neighbors. Used in sending
 	$graphInfo  = {}

@@ -6,11 +6,7 @@ $hostname = nil
 
 # ----------------------- Loop methods -----------------------#
 class Neighbor
-<<<<<<< HEAD
 	attr_accessor :name, :cost
-=======
-	attr_accessor :name, :socket, :cost
->>>>>>> 1e104666470b6fa21ed6fdf1b418e3277128910f
 
 	def initialize(name, cost)
 		@name = name
@@ -33,30 +29,37 @@ def listeningloop()
 	$server = TCPServer.new $port
 	loop do
 		Thread.fork($server.accept) do |clientSocket|
-			$recvBuffer.push(clientSocket)
+			puts "Accepting connection"
+			$semaphore.synchronize {
+				$recvBuffer.push(clientSocket)
+			}
 		end
 	end
 end
 
 def receivingloop()
 	loop do
-		$recvBuffer.each do |servSocket|
-			STDOUT.puts "Receving a message"
-		  	ready = IO.select([servSocket])
-    		readable = ready[0] #0 is sockets for reading
+		$semaphore.synchronize {
+			$recvBuffer.each do |servSocket|
+				STDOUT.puts "Receiving a message"
+			  	ready = IO.select([servSocket])
+	    		readable = ready[0] #0 is sockets for reading
 
-    		readable.each do |socket|
-	            if socket == servSocket
-	                buf = socket.recv(1024)
-	                if buf.length == 0
-	                    STDOUT.puts "The payload exceeds 1024 bytes."
-	                    exit(1)
-	                else
-            			$internalMsgQueue.push(buf)
-	                end
+	    		readable.each do |socket|
+		            if socket == servSocket
+		                buf = socket.recv(1024)
+		                if buf.length == 0
+		                    STDOUT.puts "The payload exceeds 1024 bytes."
+		                else
+        					args = buf.split(" ")
+							cmd = args[0]
+							$nodeToSocket[cmd] = socket
+		                	$internalMsgQueue.push(buf)
+		                end
+		            end
 	            end
-            end
-		end
+			end
+		}
 
 		if !$recvBuffer.empty?
 			$recvBuffer.clear
@@ -67,19 +70,19 @@ end
 #Need to parse messages and clear buffer as messages are read
 def msgHandler()
 	loop do
-		if !$internalMsgQueue.empty?
-			incoming = $internalMsgQueue.pop
-			socket = incoming[0]
-			msg = incoming[1]
-			args = str.split(" ")
-			cmd = args[0]
-			case (cmd)		
-			#Acknowledgements
-			when "APPLYEDGE"; handleEntryAdd(args[1])
-			when "LSA"; receiveUpdatedNeighbors(args[1], args[2], args[3])
-			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
+		$semaphore.synchronize {
+			if !$internalMsgQueue.empty?
+				str = $internalMsgQueue.pop
+				args = str.split(" ")
+				cmd = args[0]
+				case (cmd)		
+				#Acknowledgements
+				when "APPLYEDGE"; handleEntryAdd(args[1], args[2])
+				when "LSA"; receiveUpdatedNeighbors(args[1], args[2], args[3])
+				else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
+				end
 			end
-		end
+		}
 
 		if($clock_val > $update_time)
 			$update_time = $clock_val + $updateInterval
@@ -93,16 +96,7 @@ def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
 	#Update the cost of the neighbors here with the sequence number
 	STDOUT.puts "LSA Message being received"
 	neighborGroup = neighbors.split(",")
-<<<<<<< HEAD
-	$graphInfo[origName].clear
 
-	neighborGroup.each do |neighbor|
-		neighborArr = neighbor.split(";")
-		neighborName = neighborArr[0]
-		neighborCost = neighborArr[1]
-
-		$graphInfo[origName].push([seqNum,Neighbor.new(neighborName, neighborCost)])
-=======
 	if(!$graphInfo.has_key?(origName) || $graphInfo[origName][0] < origSeqNum.to_i)
 		$graphInfo[origName] = Array.new()
 		$graphInfo[origName][0] = origSeqNum.to_i
@@ -112,24 +106,34 @@ def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
 			neighborName = neighborArr[0]
 			neighborCost = neighborArr[1]
 
-			$graphInfo[origName][1].push(Neighbor.new(neighborName, nil, neighborCost))
+			$graphInfo[origName][1].push(Neighbor.new(neighborName, neighborCost))
 		end
->>>>>>> 1e104666470b6fa21ed6fdf1b418e3277128910f
 	end
 end
 
-def createLSAMessage(name, seqString, neighbors)
+def createLSAMessage(name, seqString, nodesToDistance)
 	message = "" << name << " " << seqString << " "
 
-	neighbors.each do |neighbor|
-		message << neighbor.name << ";" << neighbor.cost  << ","
+	puts nodesToDistance.length
+	puts $neighbors.length
+	str = ""
+	$neighbors.each do |neighbor|
+		message = neighbor.name << ";" << nodesToDistance[neighbor.name] << ","
 	end
 
 	message.chop! #Remove the last character, which will be a space
 
-	if $nodeToSocket.has_key?(name)
-		$nodeToSocket[name].write("LSA " << message)
-	end
+	puts message
+
+	$neighbors.each do |neighbor|
+		puts "YO"
+		if $nodeToSocket.has_key?(neighbor.name)
+			$semaphore.synchronize {
+				puts "In here"
+				$nodeToSocket[neighbor.name].write("LSA" << " " << message)
+			}
+		end
+	end 
 end
 
 #DIJKSTRA
@@ -180,20 +184,19 @@ def performDijkstra()
 	$rtable.clear
 	nodesToPrevious.each do |node, prev|
 		nextHop = nodesToPrevious[prev]
+		#TODO - need neighbors.name I Believe
 		while(!$neighbors.include?(nextHop))
 			nextHop = nodesToPrevious[prev]
 		end
 		$rtable.push(new RoutingInfo($hostname, node, nextHop, nodesToDistance[node]))
 	end
 
-	createLSAMessage($hostname, $update_time.to_s, $neighbors)
-
+	createLSAMessage($hostname, $update_time.to_s, nodesToDistance)
 end
 	
 	
 # -------------- Helpers to do stuff to neighbors ----------------------- $
-def handleEntryAdd(destNode)
-	STDOUT.puts "Neighbor being added"
+def handleEntryAdd(destNode, destSocket)
 	$neighbors.push(Neighbor.new(destNode, 1))
 end
 
