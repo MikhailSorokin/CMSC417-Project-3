@@ -6,19 +6,12 @@ $hostname = nil
 
 # ----------------------- Loop methods -----------------------#
 class Neighbor
-	attr_accessor :name, :socket, :cost, :seqNum
+	attr_accessor :name, :socket, :cost
 
 	def initialize(name, socket, cost)
 		@name = name
 		@socket = socket
 		@cost = cost
-	end
-
-	def initialize(name, cost, seqNum)
-		@name = name
-		@socket = nil
-		@cost = cost
-		@seqNum = seqNum
 	end
 	
 	def ==(other)
@@ -97,14 +90,17 @@ def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
 	#Update the cost of the neighbors here with the sequence number
 	STDOUT.puts "LSA Message being received"
 	neighborGroup = neighbors.split(",")
-	$graphInfo[origName].clear
+	if(!$graphInfo.has_key?(origName) || $graphInfo[origName][0] < origSeqNum.to_i)
+		$graphInfo[origName] = Array.new()
+		$graphInfo[origName][0] = origSeqNum.to_i
+		$graphInfo[origName][1] = Array.new()
+		neighborGroup.each do |neighbor|
+			neighborArr = neighbor.split(";")
+			neighborName = neighborArr[0]
+			neighborCost = neighborArr[1]
 
-	neighborGroup.each do |neighbor|
-		neighborArr = neighbor.split(";")
-		neighborName = neighborArr[0]
-		neighborCost = neighborArr[1]
-
-		$graphInfo[origName].push([seqNum,Neighbor.new(neighborName, neighborCost, seqNum)])
+			$graphInfo[origName][1].push(Neighbor.new(neighborName, nil, neighborCost))
+		end
 	end
 end
 
@@ -130,11 +126,9 @@ def performDijkstra()
 	nodesToPrevious = {}
 
 	nodeQueue = []
-
 	$nodeToPort.each do |node, port|
 		nodesToDistance[node] = Float::INFINITY
 		nodeQueue.push(node)
-		STDOUT.puts node << " " << port
 	end
 
 	nodesToDistance[$hostname] = 0
@@ -150,14 +144,13 @@ def performDijkstra()
 				vertexToRemove = node
 			end
 		end
-
 		nodeQueue.delete(vertexToRemove)
 		# Graph info is a mapping from node name to that node's neighbor information
 		# A two element array contains the node's neighbor information
 		# the first element is the sequence number which Dijkstra's ignores
 		# The second element is an array of Neighbor class items corresponding to that node's neighbors
 		# We are iterating over vertexToRemove's neighbors, not our own.
-		if (graphInfo.has_key?(vertexToRemove))
+		if ($graphInfo.has_key?(vertexToRemove))
 			$graphInfo[vertexToRemove].at(1).each do |othersNeighbor| 
 				altDist = nodesToDistance[vertexToRemove] + othersNeighbor.cost
 
