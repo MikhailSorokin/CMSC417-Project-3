@@ -53,6 +53,8 @@ def receivingloop()
 	                	end
 	                end
 	            end
+
+	            readable.clear
 			end
 		#}
 	end
@@ -75,7 +77,11 @@ def msgHandler()
 				end
 			end
 		#}
+	end
+end
 
+def dijkstras()
+	loop do
 		if($clock_val > $update_time)
 			$update_time = $clock_val + $updateInterval
 
@@ -119,9 +125,7 @@ end
 def floodMessage(message)
 	$neighbors.each do |neighbor|
 		if $nodeToSocket.has_key?(neighbor.name)
-			$semaphore.synchronize {
-				$nodeToSocket[neighbor.name].write(message)
-			}
+			$nodeToSocket[neighbor.name].write(message)
 		end
 	end
 end

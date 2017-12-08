@@ -235,6 +235,7 @@ def setup(hostname, port, nodes, config)
 	Thread.new{listeningloop()}
 	Thread.new{receivingloop()}
 	Thread.new{msgHandler()}
+	Thread.new{dijkstras()}
 	main()
 end
 
