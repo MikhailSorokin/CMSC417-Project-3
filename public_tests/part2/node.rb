@@ -222,6 +222,7 @@ def setup(hostname, port, nodes, config)
 	while(true)
 	   sleep(1)
 	   $clock_val = $clock_val + 1
+	   STDOUT.puts $clock_val
 	end
 	}
 	
