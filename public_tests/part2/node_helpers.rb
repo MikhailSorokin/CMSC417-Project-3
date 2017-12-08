@@ -6,12 +6,11 @@ $hostname = nil
 
 # ----------------------- Loop methods -----------------------#
 class Neighbor
-	attr_accessor :name, :cost, :seqNum
+	attr_accessor :name, :cost
 
-	def initialize(name, cost, seqNum = nil)
+	def initialize(name, cost)
 		@name = name
 		@cost = cost
-		@seqNum = seqNum
 	end
 	
 	def ==(other)
@@ -97,7 +96,7 @@ def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
 		neighborName = neighborArr[0]
 		neighborCost = neighborArr[1]
 
-		$graphInfo[origName].push([seqNum,Neighbor.new(neighborName, neighborCost, seqNum)])
+		$graphInfo[origName].push([seqNum,Neighbor.new(neighborName, neighborCost)])
 	end
 end
 
@@ -135,7 +134,6 @@ def performDijkstra()
 		minCost = Float::INFINITY
 		vertexToRemove = nil
 
-		cost = 0
 		nodeQueue.each do |node|
 			if nodesToDistance[node] <= minCost
 				minCost = nodesToDistance[node]

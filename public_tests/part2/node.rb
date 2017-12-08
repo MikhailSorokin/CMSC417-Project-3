@@ -45,7 +45,6 @@ def dumptable(cmd)
 		out_file.puts("#{entry}")
 	end
 
-	#TODO - not outputting new lines in file for some reason
 	out_file.close
 end
 
