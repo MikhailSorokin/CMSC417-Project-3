@@ -87,8 +87,6 @@ def msgHandler()
 
 		if($clock_val > $update_time)
 			$update_time = $clock_val + $updateInterval
-			STDOUT.puts $clock_val
-			STDOUT.puts "\n"
 
 			performDijkstra()
 		end
@@ -147,8 +145,8 @@ def performDijkstra()
 		vertexToRemove = nil
 
 		nodeQueue.each do |node|
-			if cost <= minCost
-				minCost = cost
+			if nodesToDistance[node] <= minCost
+				minCost = nodesToDistance[node]
 				vertexToRemove = node
 			end
 		end
@@ -159,14 +157,16 @@ def performDijkstra()
 		# the first element is the sequence number which Dijkstra's ignores
 		# The second element is an array of Neighbor class items corresponding to that node's neighbors
 		# We are iterating over vertexToRemove's neighbors, not our own.
-		$graphInfo[vertexToRemove].at(1).each do |othersNeighbor| 
-			altDist = nodesToDistance[vertexToRemove] + othersNeighbor.cost
+		if (graphInfo.has_key?(vertexToRemove))
+			$graphInfo[vertexToRemove].at(1).each do |othersNeighbor| 
+				altDist = nodesToDistance[vertexToRemove] + othersNeighbor.cost
 
-			if currDist < nodesToDistance[othersNeighbor.name].cost
-				nodesToDistance[othersNeighbor.name] = currDist
-				nodesToPrevious[othersNeighbor.name] = vertexToRemove
-			end
-		end	
+				if currDist < nodesToDistance[othersNeighbor.name].cost
+					nodesToDistance[othersNeighbor.name] = currDist
+					nodesToPrevious[othersNeighbor.name] = vertexToRemove
+				end
+			end	
+		end
 	end
 
 	# We have the cost to travel to all other nodes and also the previous node in their path.
