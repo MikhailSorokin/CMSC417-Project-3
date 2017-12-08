@@ -137,13 +137,13 @@ def performDijkstra()
 	nodesToPrevious = {}
 
 	nodeQueue = []
-	$nodeToPort.each do |node, port|
+	$graphInfo.each do |node, info|
 		nodesToDistance[node] = Float::INFINITY
 		nodeQueue.push(node)
 	end
 
 	nodesToDistance[$hostname] = 0
-
+	$rtable.clear
 	while !nodeQueue.empty?
 		#now use the neighbors array to see what is min distance
 		minCost = Float::INFINITY
@@ -161,32 +161,23 @@ def performDijkstra()
 		# the first element is the sequence number which Dijkstra's ignores
 		# The second element is an array of Neighbor class items corresponding to that node's neighbors
 		# We are iterating over vertexToRemove's neighbors, not our own.
-		if ($graphInfo.has_key?(vertexToRemove))
-			$graphInfo[vertexToRemove].at(1).each do |othersNeighbor| 
-				altDist = nodesToDistance[vertexToRemove] + othersNeighbor.cost
-				if altDist < nodesToDistance[othersNeighbor.name]
-					nodesToDistance[othersNeighbor.name] = altDist
-					nodesToPrevious[othersNeighbor.name] = vertexToRemove
-				end
-			end	
-		end
-	end
-	# We have the cost to travel to all other nodes and also the previous node in their path.
-	# We want to find the next hop from us, the source node, and then assign that to our routing table.
-	$rtable.clear
-	nodesToPrevious.each do |node, prev|
-		if(prev == $hostname) # this means that the previous node is ourselves, so this node is a neighbor and is its own nexthop
-			$rtable.push(RoutingInfo.new($hostname, node, node, nodesToDistance[node]))
-		else
-			nextHop = nodesToPrevious[prev]
-			#TODO - need neighbors.name I Believe
-			while(!$neighbors.include?(nextHop))
-				nextHop = nodesToPrevious[prev]
+		$graphInfo[vertexToRemove].at(1).each do |othersNeighbor| 
+			altDist = nodesToDistance[vertexToRemove] + othersNeighbor.cost
+			if altDist < nodesToDistance[othersNeighbor.name]
+				nodesToDistance[othersNeighbor.name] = altDist
+				nodesToPrevious[othersNeighbor.name] = vertexToRemove
 			end
-			$rtable.push(RoutingInfo.new($hostname, node, nextHop, nodesToDistance[node]))
+		end
+		if(vertexToRemove != $hostname)
+			if (nodesToPrevious[vertexToRemove] == $hostname)
+				$rtable.push(RoutingInfo.new($hostname, vertexToRemove, vertexToRemove, nodesToDistance[vertexToRemove]))
+				nodesToPrevious[vertexToRemove] = vertexToRemove
+			else
+				$rtable.push(RoutingInfo.new($hostname, vertexToRemove, nodesToPrevious[nodesToPrevious[vertexToRemove]], nodesToDistance[vertexToRemove]))
+				nodesToPrevious[vertexToRemove] = vertexToRemove
+			end
 		end
 	end
-	createOwnLSA()
 end
 	
 	
