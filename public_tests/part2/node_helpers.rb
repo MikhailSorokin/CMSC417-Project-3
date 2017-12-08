@@ -87,8 +87,6 @@ def msgHandler()
 
 		if($clock_val > $update_time)
 			$update_time = $clock_val + $updateInterval
-			STDOUT.puts $clock_val
-			STDOUT.puts "\n"
 
 			performDijkstra()
 		end
@@ -136,7 +134,6 @@ def performDijkstra()
 	$nodeToPort.each do |node, port|
 		nodesToDistance[node] = Float::INFINITY
 		nodeQueue.push(node)
-		STDOUT.puts node << " " << port
 	end
 
 	nodesToDistance[$hostname] = 0
@@ -146,6 +143,7 @@ def performDijkstra()
 		minCost = Float::INFINITY
 		vertexToRemove = nil
 
+		cost = 0
 		nodeQueue.each do |node|
 			if cost <= minCost
 				minCost = cost
@@ -168,7 +166,7 @@ def performDijkstra()
 			end
 		end	
 	end
-
+	
 	# We have the cost to travel to all other nodes and also the previous node in their path.
 	# We want to find the next hop from us, the source node, and then assign that to our routing table.
 	$rtable.clear
