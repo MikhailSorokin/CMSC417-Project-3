@@ -105,6 +105,15 @@ end
 
 def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
 	#TODO - update here
+	neighborGroup = neighbors.split(",")
+
+	neighborGroup.each do |neighbor|
+		neighborArr = neighbor.split(";")
+		neighborName = neighborArr[0]
+		neighborCost = neighborArr[1]
+
+		$rtable[RoutingInfo.new(neighborName, neighborCost, )]
+	end
 end
 
 def createLSAMessage(name, seqString, neighbors)
