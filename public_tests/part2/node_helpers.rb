@@ -18,7 +18,7 @@ class Neighbor
 	end
 	
 	def to_s
-		"#{name};#{cost},"
+		"#{name};#{cost}"
 	end
 
 end
@@ -29,9 +29,7 @@ def listeningloop()
 	$server = TCPServer.new $port
 	loop do
 		Thread.fork($server.accept) do |clientSocket|
-			$semaphore.synchronize {
-				$serverSockets.push(clientSocket)
-			}
+			$serverSockets.push(clientSocket)
 		end
 	end
 end
@@ -107,10 +105,11 @@ def handleLSA(origName, origSeqNum, neighbors)
 end
 
 def createOwnLSA()
+	puts "Sending LSA"
 	message = "LSA #{$hostname} #{$clock_val.to_s} "
 	str = ""
 	$neighbors.each do |neighbor|
-		message << neighbor.to_s
+		message << "#{neighbor.to_s},"
 	end
 	message.chop! #Remove the last character, which will be a space
 
@@ -161,32 +160,28 @@ def performDijkstra()
 		if ($graphInfo.has_key?(vertexToRemove))
 			$graphInfo[vertexToRemove].at(1).each do |othersNeighbor| 
 				altDist = nodesToDistance[vertexToRemove] + othersNeighbor.cost
-
-				if altDist < nodesToDistance[othersNeighbor.name].cost
+				if altDist < nodesToDistance[othersNeighbor.name]
 					nodesToDistance[othersNeighbor.name] = altDist
 					nodesToPrevious[othersNeighbor.name] = vertexToRemove
 				end
 			end	
 		end
 	end
-
 	# We have the cost to travel to all other nodes and also the previous node in their path.
 	# We want to find the next hop from us, the source node, and then assign that to our routing table.
 	$rtable.clear
 	nodesToPrevious.each do |node, prev|
-		puts "creating rtable entry for  #{node}"
 		if(prev == $hostname) # this means that the previous node is ourselves, so this node is a neighbor and is its own nexthop
-			$rtable.push(new RoutingInfo($hostname, node, node, nodesToDistance[node]))
+			$rtable.push(RoutingInfo.new($hostname, node, node, nodesToDistance[node]))
 		else
 			nextHop = nodesToPrevious[prev]
 			#TODO - need neighbors.name I Believe
 			while(!$neighbors.include?(nextHop))
 				nextHop = nodesToPrevious[prev]
 			end
-			$rtable.push(new RoutingInfo($hostname, node, nextHop, nodesToDistance[node]))
+			$rtable.push(RoutingInfo.new($hostname, node, nextHop, nodesToDistance[node]))
 		end
 	end
-
 	createOwnLSA()
 end
 	

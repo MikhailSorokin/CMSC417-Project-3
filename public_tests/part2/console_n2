@@ -1,6 +1,52 @@
+Our rtable: []
+Sending LSA
 n2 handling this message: APPLYEDGE n1 127.0.0.1
 n2 handling this message: LSA n1 2 n2;1
 n2 handling this message: LSA n1 2 n2;1
+Our rtable: []
+Sending LSA
+n2 handling this message: LSA n2 4 n1;1
+n2 handling this message: LSA n1 4 n2;1
+n2 handling this message: LSA n1 4 n2;1
+creating rtable entry for  n1
+ready?
+yee n2,n1,n1,1
+pushed to $rtable
+Our rtable: [n2,n1,n1,1]
+Sending LSA
+n2 handling this message: LSA n2 6 n1;1,n3;1
+creating rtable entry for  n1
+ready?
+yee n2,n1,n1,1
+pushed to $rtable
+creating rtable entry for  n3
+ready?
+yee n2,n3,n3,1
+pushed to $rtable
+Our rtable: [n2,n1,n1,1, n2,n3,n3,1]
+Sending LSA
+creating rtable entry for  n1
+ready?
+yee n2,n1,n1,1
+pushed to $rtable
+creating rtable entry for  n3
+ready?
+yee n2,n3,n3,1
+pushed to $rtable
+Our rtable: [n2,n1,n1,1, n2,n3,n3,1]
+Sending LSA
+creating rtable entry for  n1
+ready?
+yee n2,n1,n1,1
+pushed to $rtable
+creating rtable entry for  n3
+ready?
+yee n2,n3,n3,1
+pushed to $rtable
+Our rtable: [n2,n1,n1,1, n2,n3,n3,1]
+Sending LSA
+
 listenging on 2 sockets}
-graphInfo: {"n1"=>[2, [n2;1,]]}
+graphInfo: {"n1"=>[4, [n2;1]], "n2"=>[6, [n1;1, n3;1]]}
 writing on sockets to: ["n1", "n3"]}
+rtable: [n2,n1,n1,1, n2,n3,n3,1]

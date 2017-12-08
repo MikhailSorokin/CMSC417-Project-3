@@ -42,7 +42,7 @@ end
 
 def dumptable(cmd)
 	out_file = File.new(cmd[0], "w+")
-	$rtable.each do |node, entry|
+	$rtable.each do |entry|
 		out_file.puts("#{entry}")
 	end
 
@@ -50,9 +50,11 @@ def dumptable(cmd)
 end
 
 def shutdown(cmd)
+	STDOUT.puts ""
 	STDOUT.puts "listenging on #{$serverSockets.length} sockets}"
 	STDOUT.puts "graphInfo: #{$graphInfo}"
 	STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}}"
+	STDOUT.puts "rtable: #{$rtable}"
 	#Create a connection for each TCP Socket again
 	STDOUT.flush
 	#$semaphore.synchronize {
@@ -169,7 +171,7 @@ def setup(hostname, port, nodes, config)
 	$nodeToSocket = {} #Hashmap to index socket by node
 
 	#Database
-	$rtable = {} #Hashmap to routing info by index node
+	$rtable = [] #Array of routing entries
 
 	#Buffers
 	$serverSockets = [] # Array of sockets we listen in on

@@ -1,4 +1,23 @@
+Our rtable: []
+Sending LSA
 n1 handling this message: LSA n1 2 n2;1
+n1 handling this message: LSA n2 4 n1;1
+n1 handling this message: LSA n2 4 n1;1
+creating rtable entry for  n2
+ready?
+yee n1,n2,n2,1
+pushed to $rtable
+Our rtable: [n1,n2,n2,1]
+Sending LSA
+n1 handling this message: LSA n1 4 n2;1
+n1 handling this message: LSA n2 6 n1;1,n3;1
+creating rtable entry for  n2
+ready?
+yee n1,n2,n2,1
+pushed to $rtable
+creating rtable entry for  n3
+
 listenging on 1 sockets}
-graphInfo: {"n1"=>[2, [n2;1,]]}
+graphInfo: {"n1"=>[4, [n2;1]], "n2"=>[6, [n1;1, n3;1]]}
 writing on sockets to: ["n2"]}
+rtable: [n1,n2,n2,1]

@@ -1,4 +1,23 @@
+Our rtable: []
+Sending LSA
+Our rtable: []
+Sending LSA
 n3 handling this message: APPLYEDGE n2 127.0.0.1
+n3 handling this message: LSA n2 6 n1;1,n3;1
+n3 handling this message: LSA n2 6 n1;1,n3;1
+Our rtable: []
+Sending LSA
+n3 handling this message: LSA n2 8 n1;1,n3;1
+Our rtable: []
+Sending LSA
+n3 handling this message: LSA n2 10 n1;1,n3;1
+Our rtable: []
+Sending LSA
+n3 handling this message: LSA n2 12 n1;1,n3;1
+Our rtable: []
+Sending LSA
+
 listenging on 1 sockets}
-graphInfo: {}
+graphInfo: {"n2"=>[12, [n1;1, n3;1]]}
 writing on sockets to: ["n2"]}
+rtable: []
