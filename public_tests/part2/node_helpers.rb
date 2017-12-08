@@ -29,7 +29,6 @@ def listeningloop()
 	$server = TCPServer.new $port
 	loop do
 		Thread.fork($server.accept) do |clientSocket|
-			puts "Accepting connection"
 			$semaphore.synchronize {
 				$serverSockets.push(clientSocket)
 			}
@@ -39,44 +38,45 @@ end
 
 def receivingloop()
 	loop do
-		$semaphore.synchronize {
+		#$semaphore.synchronize {
 			$serverSockets.each do |servSocket|
-				STDOUT.puts "Receiving a message"
 			  	ready = IO.select([servSocket])
 	    		readable = ready[0] #0 is sockets for reading
 
 	    		readable.each do |socket|
-		            if socket == servSocket
-		                buf = socket.recv(1024)
-		                if buf.length == 0
-		                    STDOUT.puts "The payload exceeds 1024 bytes."
-		                else
-		                	$internalMsgQueue.push(buf)
-		                end
-		            end
+	                buf = socket.recv(2048)
+	                if buf.length == 0
+	                    #STDOUT.puts "The payload exceeds 1024 bytes."
+	                else
+	                	buf.chop! #Remove the last character, which should be `
+	                	msgs = buf.split("`")
+	                	msgs.each do |msg|
+	                		$internalMsgQueue.push(msg)
+	                	end
+	                end
 	            end
 			end
-		}
+		#}
 	end
 end
 
 #Need to parse messages and clear buffer as messages are read
 def msgHandler()
 	loop do
-		$semaphore.synchronize {
+		#$semaphore.synchronize {
 			if !$internalMsgQueue.empty?
 				str = $internalMsgQueue.pop
 				STDOUT.puts "#{$hostname} handling this message: #{str}"
 				args = str.split(" ")
 				cmd = args[0]
-				case (cmd)		
-				#Acknowledgements
+
+				case (cmd)
 				when "APPLYEDGE"; handleEntryAdd(args[1], args[2])
-				when "LSA"; receiveUpdatedNeighbors(args[1], args[2], args[3])
+				when "LSA"; handleLSA(args[1], args[2], args[3])
 				else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 				end
 			end
-		}
+		#}
 
 		if($clock_val > $update_time)
 			$update_time = $clock_val + $updateInterval
@@ -86,9 +86,8 @@ def msgHandler()
 	end
 end
 
-def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
+def handleLSA(origName, origSeqNum, neighbors)
 	#Update the cost of the neighbors here with the sequence number
-	STDOUT.puts "#{$hostname} received these neighbors: #{neighbors}"
 	neighborGroup = neighbors.split(",")
 
 	if(!$graphInfo.has_key?(origName) || $graphInfo[origName][0] < origSeqNum.to_i)
@@ -98,12 +97,12 @@ def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
 		neighborGroup.each do |neighbor_string|
 			neighborArr = neighbor_string.split(";")
 			neighborName = neighborArr[0]
-			neighborCost = neighborArr[1]
+			neighborCost = neighborArr[1].to_i
 
 			$graphInfo[origName][1].push(Neighbor.new(neighborName, neighborCost))
 		end
 
-		# We should flood the LSA we just processed
+		floodMessage("LSA #{origName} #{origSeqNum} #{neighbors}`")
 	end
 end
 
@@ -114,14 +113,12 @@ def createOwnLSA()
 		message << neighbor.to_s
 	end
 	message.chop! #Remove the last character, which will be a space
-	puts "created LSA: #{message}"
 
-	floodMessage(message)
+	floodMessage("#{message}`")
 end
 
 def floodMessage(message)
 	$neighbors.each do |neighbor|
-		puts "flooding to #{neighbor.name}"
 		if $nodeToSocket.has_key?(neighbor.name)
 			$semaphore.synchronize {
 				$nodeToSocket[neighbor.name].write(message)
@@ -165,8 +162,8 @@ def performDijkstra()
 			$graphInfo[vertexToRemove].at(1).each do |othersNeighbor| 
 				altDist = nodesToDistance[vertexToRemove] + othersNeighbor.cost
 
-				if currDist < nodesToDistance[othersNeighbor.name].cost
-					nodesToDistance[othersNeighbor.name] = currDist
+				if altDist < nodesToDistance[othersNeighbor.name].cost
+					nodesToDistance[othersNeighbor.name] = altDist
 					nodesToPrevious[othersNeighbor.name] = vertexToRemove
 				end
 			end	
@@ -197,9 +194,7 @@ end
 # -------------- Helpers to do stuff to neighbors ----------------------- $
 def handleEntryAdd(destNode, srcIP)
 	clientSocket = TCPSocket.new(srcIP, $nodeToPort[destNode])
-	$semaphore.synchronize {
-		$nodeToSocket[destNode] = clientSocket
-	}
+	$nodeToSocket[destNode] = clientSocket
 	$neighbors.push(Neighbor.new(destNode, 1))
 end
 

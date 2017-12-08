@@ -1,5 +1,4 @@
-created LSA: LSA n3 2
-created LSA: LSA n3 4
-created LSA: LSA n3 6
-Accepting connection
-Receiving a message
+n3 handling this message: APPLYEDGE n2 127.0.0.1
+listenging on 1 sockets}
+graphInfo: {}
+writing on sockets to: ["n2"]}

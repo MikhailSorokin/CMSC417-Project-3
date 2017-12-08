@@ -1,14 +1,4 @@
-created LSA: LSA n1 2 n2;1
-flooding to n2
-created LSA: LSA n1 4 n2;1
-flooding to n2
-created LSA: LSA n1 6 n2;1
-flooding to n2
-created LSA: LSA n1 8 n2;1
-flooding to n2
-created LSA: LSA n1 10 n2;1
-flooding to n2
-created LSA: LSA n1 12 n2;1
-flooding to n2
-created LSA: LSA n1 14 n2;1
-flooding to n2
+n1 handling this message: LSA n1 2 n2;1
+listenging on 1 sockets}
+graphInfo: {"n1"=>[2, [n2;1,]]}
+writing on sockets to: ["n2"]}

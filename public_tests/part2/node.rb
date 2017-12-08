@@ -36,10 +36,8 @@ def edgeb(cmd)
 
 	$neighbors.push(Neighbor.new(destNode, 1))
 
-	$semaphore.synchronize {
-		clientSocket.write("APPLYEDGE #{$hostname} #{srcIP}")
-		$nodeToSocket[destNode] = clientSocket
-	}
+	clientSocket.write("APPLYEDGE #{$hostname} #{srcIP}`")
+	$nodeToSocket[destNode] = clientSocket
 end
 
 def dumptable(cmd)
@@ -52,6 +50,9 @@ def dumptable(cmd)
 end
 
 def shutdown(cmd)
+	STDOUT.puts "listenging on #{$serverSockets.length} sockets}"
+	STDOUT.puts "graphInfo: #{$graphInfo}"
+	STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}}"
 	#Create a connection for each TCP Socket again
 	STDOUT.flush
 	#$semaphore.synchronize {
