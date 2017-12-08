@@ -14,20 +14,19 @@ class Message
 end
 
 class Neighbor
-	attr_accessor :name, :socket, :cost,
-	:seqNum, :neighborArray
+	attr_accessor :name, :socket, :cost, :seqNum
+
 	def initialize(name, socket, cost)
 		@name = name
 		@socket = socket
 		@cost = cost
 	end
 
-	def initialize(name, cost, seqNum, neighborArray)
+	def initialize(name, cost, seqNum)
 		@name = name
 		@socket = nil
 		@cost = cost
 		@seqNum = seqNum
-		@neighborArray = neighborArray
 	end
 	
 	def ==(other)
@@ -35,7 +34,7 @@ class Neighbor
 	end
 	
 	def to_s
-		"#{name},#{cost}"
+		"#{name}\:#{cost}"
 	end
 
 end
@@ -100,19 +99,20 @@ def msgHandler()
 			
 			performDijkstra()
 		end
-	endS
+	end
 end
 
 def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
-	#TODO - update here
+	#Update the cost of the neighbors here with the sequence number
 	neighborGroup = neighbors.split(",")
+	$graphInfo[origName].clear
 
 	neighborGroup.each do |neighbor|
 		neighborArr = neighbor.split(";")
 		neighborName = neighborArr[0]
 		neighborCost = neighborArr[1]
 
-		$rtable[RoutingInfo.new(neighborName, neighborCost, )]
+		$graphInfo[origName].push([seqNum,Neighbor.new(neighborName, neighborCost, seqNum)])
 	end
 end
 
@@ -134,39 +134,55 @@ end
 def performDijkstra()
 	#We have the neighbors, so just initialize all distances to Infinity
 	nodesToDistance = {}
+	nodesToPrevious = {}
 
 	nodeQueue = []
 
-	$nodeToPort.each do |neighbor, port|
-		nodesToDistance[neighbor] = Float::INFINITY
-		nodeQueue.push(neighbor)
+	$nodeToPort.each do |node, port|
+		nodesToDistance[node] = Float::INFINITY
+
+		nodeQueue.push(node)
 	end
 
 	nodesToDistance[$hostname] = 0
-	nodeQueue.push($hostname)
 
 	while !nodeQueue.empty?
 		#now use the neighbors array to see what is min distance
 		minCost = Float::INFINITY
 		vertexToRemove = nil
 
-		nodeQueue.each do |node, cost|
+		nodeQueue.each do |node|
 			if cost <= minCost
 				minCost = cost
 				vertexToRemove = node
 			end
 		end
 
-		currentVertex = nodeQueue.remove(vertexToRemove)
+		nodeQueue.delete(vertexToRemove)
+		# Graph info is a mapping from node name to that node's neighbor information
+		# A two element array contains the node's neighbor information
+		# the first element is the sequence number which Dijkstra's ignores
+		# The second element is an array of Neighbor class items corresponding to that node's neighbors
+		# We are iterating over vertexToRemove's neighbors, not our own.
+		$graphInfo[vertexToRemove].at(1).each do |othersNeighbor| 
+			altDist = nodesToDistance[vertexToRemove] + othersNeighbor.cost
 
-		nodeQueue.each do |neighborNode|
-			currDist = currentVertex + $neighbors[neighborNode].cost
-
-			if currDist < $neighbors[neighborNode].cost
-				$neighbors[neighborNode].cost = currDist
-				#TODO - Path for TraceRoute?
+			if currDist < nodesToDistance[othersNeighbor.name].cost
+				nodesToDistance[othersNeighbor.name] = currDist
+				nodesToPrevious[othersNeighbor.name] = vertexToRemove
 			end
 		end	
+	end
+
+	# We have the cost to travel to all other nodes and also the previous node in their path.
+	# We want to find the next hop from us, the source node, and then assign that to our routing table.
+	$rtable.clear
+	nodesToPrevious.each do |node, prev|
+		nextHop = nodesToPrevious[prev]
+		while(!$neighbors.include?(nextHop))
+			nextHop = nodesToPrevious[prev]
+		end
+		$rtable.push(new RoutingInfo($hostname, node, nextHop, nodesToDistance[node]))
 	end
 
 	createLSAMessage($hostname, $update_time.to_s, $neighbors)
