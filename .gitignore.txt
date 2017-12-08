@@ -1,0 +1,1 @@
+public_tests/part*/console_*.txt
