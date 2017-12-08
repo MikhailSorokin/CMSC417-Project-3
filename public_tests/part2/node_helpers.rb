@@ -5,14 +5,6 @@ $port = nil
 $hostname = nil
 
 # ----------------------- Loop methods -----------------------#
-class Message
-	attr_accessor :socket, :msg
-	def initialize(socket, msg)
-		@socket = socket
-		@msg = msg
-	end
-end
-
 class Neighbor
 	attr_accessor :name, :socket, :cost, :seqNum
 
@@ -53,6 +45,7 @@ end
 def receivingloop()
 	loop do
 		$recvBuffer.each do |servSocket|
+			STDOUT.puts "Receving a message"
 		  	ready = IO.select([servSocket])
     		readable = ready[0] #0 is sockets for reading
 
@@ -63,9 +56,7 @@ def receivingloop()
 	                    STDOUT.puts "The payload exceeds 1024 bytes."
 	                    exit(1)
 	                else
-            			$semaphore.synchronize {
-							$internalMsgQueue.push(buf)
-						}
+            			$internalMsgQueue.push(buf)
 	                end
 	            end
             end
@@ -80,15 +71,15 @@ end
 #Need to parse messages and clear buffer as messages are read
 def msgHandler()
 	loop do
-
 		if !$internalMsgQueue.empty?
 			incoming = $internalMsgQueue.pop
-			str = incoming.str.strip()
+			socket = incoming[0]
+			msg = incoming[1]
 			args = str.split(" ")
 			cmd = args[0]
 			case (cmd)		
 			#Acknowledgements
-			when "APPLYEDGE"; handleEntryAdd($socketToBuf[args[1]],args[1])
+			when "APPLYEDGE"; handleEntryAdd(args[1])
 			when "LSA"; receiveUpdatedNeighbors(args[1], args[2], args[3])
 			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
@@ -96,7 +87,9 @@ def msgHandler()
 
 		if($clock_val > $update_time)
 			$update_time = $clock_val + $updateInterval
-			
+			STDOUT.puts $clock_val
+			STDOUT.puts "\n"
+
 			performDijkstra()
 		end
 	end
@@ -104,6 +97,7 @@ end
 
 def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
 	#Update the cost of the neighbors here with the sequence number
+	STDOUT.puts "LSA Message being received"
 	neighborGroup = neighbors.split(",")
 	$graphInfo[origName].clear
 
@@ -117,6 +111,7 @@ def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
 end
 
 def createLSAMessage(name, seqString, neighbors)
+	STDOUT.puts "LSA Message being created"
 	message = "" << name << " " << seqString << " "
 
 	neighbors.each do |neighbor|
@@ -140,8 +135,8 @@ def performDijkstra()
 
 	$nodeToPort.each do |node, port|
 		nodesToDistance[node] = Float::INFINITY
-
 		nodeQueue.push(node)
+		STDOUT.puts node << " " << port
 	end
 
 	nodesToDistance[$hostname] = 0
@@ -191,9 +186,8 @@ end
 	
 	
 # -------------- Helpers to do stuff to neighbors ----------------------- $
-def handleEntryAdd(socket, destNode)
+def handleEntryAdd(destNode)
 	$neighbors.push(Neighbor.new(destNode, socket, 1))
-	socket.write("APPLYEDGE" << " " << $hostname)
 end
 
 # Handles deleting entries from the table - ASYMMETRIC

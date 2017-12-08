@@ -31,12 +31,12 @@ def edgeb(cmd)
 	destIP = cmd[1]
 	destNode = cmd[2]
 
-	clientSocket = TCPSocket.new(destIP, $nodeToPort[destNode])
 	#Open connection towards destination IP from source)
-	newmsg = "APPLYEDGE" << " " << destNode
-	$nodeToSocket[destNode] = clientSocket 
+	clientSocket = TCPSocket.new(destIP, $nodeToPort[destNode])
 
-	$internalMsgQueue.push(Message.new(clientSocket, newmsg))
+	$neighbors.push(Neighbor.new(destNode, clientSocket, 1))
+	clientSocket.write("APPLYEDGE" << " " << $hostname)
+	$nodeToSocket[destNode] = clientSocket 
 end
 
 def dumptable(cmd)
@@ -213,7 +213,7 @@ def setup(hostname, port, nodes, config)
 		end
 	end
 
-	$clock_val = Time.now().to_i()
+	$clock_val = 0
 	$update_time = $clock_val + $updateInterval
 	
 	#A timer loop that updates the current clock and is used to synchronize updates
