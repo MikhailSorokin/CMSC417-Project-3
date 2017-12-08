@@ -3,12 +3,3 @@ created LSA: LSA n3 4
 created LSA: LSA n3 6
 Accepting connection
 Receiving a message
-n3 handling this message: APPLYEDGE n2
-created LSA: LSA n3 8 n2;1
-flooding to n2
-created LSA: LSA n3 10 n2;1
-flooding to n2
-created LSA: LSA n3 12 n2;1
-flooding to n2
-created LSA: LSA n3 14 n2;1
-flooding to n2

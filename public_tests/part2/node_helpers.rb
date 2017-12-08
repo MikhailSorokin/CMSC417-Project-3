@@ -31,7 +31,7 @@ def listeningloop()
 		Thread.fork($server.accept) do |clientSocket|
 			puts "Accepting connection"
 			$semaphore.synchronize {
-				$recvBuffer.push(clientSocket)
+				$serverSockets.push(clientSocket)
 			}
 		end
 	end
@@ -40,7 +40,7 @@ end
 def receivingloop()
 	loop do
 		$semaphore.synchronize {
-			$recvBuffer.each do |servSocket|
+			$serverSockets.each do |servSocket|
 				STDOUT.puts "Receiving a message"
 			  	ready = IO.select([servSocket])
 	    		readable = ready[0] #0 is sockets for reading
@@ -51,19 +51,12 @@ def receivingloop()
 		                if buf.length == 0
 		                    STDOUT.puts "The payload exceeds 1024 bytes."
 		                else
-        					args = buf.split(" ")
-							cmd = args[0]
-							$nodeToSocket[cmd] = socket
 		                	$internalMsgQueue.push(buf)
 		                end
 		            end
 	            end
 			end
 		}
-
-		if !$recvBuffer.empty?
-			$recvBuffer.clear
-		end
 	end
 end
 
@@ -202,7 +195,11 @@ end
 	
 	
 # -------------- Helpers to do stuff to neighbors ----------------------- $
-def handleEntryAdd(destNode, destSocket)
+def handleEntryAdd(destNode, srcIP)
+	clientSocket = TCPSocket.new(srcIP, $nodeToPort[destNode])
+	$semaphore.synchronize {
+		$nodeToSocket[destNode] = clientSocket
+	}
 	$neighbors.push(Neighbor.new(destNode, 1))
 end
 

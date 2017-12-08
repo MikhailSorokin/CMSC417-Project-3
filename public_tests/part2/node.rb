@@ -37,7 +37,7 @@ def edgeb(cmd)
 	$neighbors.push(Neighbor.new(destNode, 1))
 
 	$semaphore.synchronize {
-		clientSocket.write("APPLYEDGE" << " " << $hostname)
+		clientSocket.write("APPLYEDGE #{$hostname} #{srcIP}")
 		$nodeToSocket[destNode] = clientSocket
 	}
 end
@@ -171,7 +171,7 @@ def setup(hostname, port, nodes, config)
 	$rtable = {} #Hashmap to routing info by index node
 
 	#Buffers
-	$recvBuffer = [] #Hashmap to index input buffers by socket
+	$serverSockets = [] # Array of sockets we listen in on
 
 	#GraphInfo stores available node names to ITS neighbors. Used in sending
 	$graphInfo  = {}
