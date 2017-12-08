@@ -6,17 +6,10 @@ $hostname = nil
 
 # ----------------------- Loop methods -----------------------#
 class Neighbor
-	attr_accessor :name, :socket, :cost, :seqNum
+	attr_accessor :name, :cost, :seqNum
 
-	def initialize(name, socket, cost)
+	def initialize(name, cost, seqNum = nil)
 		@name = name
-		@socket = socket
-		@cost = cost
-	end
-
-	def initialize(name, cost, seqNum)
-		@name = name
-		@socket = nil
 		@cost = cost
 		@seqNum = seqNum
 	end
@@ -109,7 +102,6 @@ def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
 end
 
 def createLSAMessage(name, seqString, neighbors)
-	STDOUT.puts "LSA Message being created"
 	message = "" << name << " " << seqString << " "
 
 	neighbors.each do |neighbor|
@@ -157,7 +149,7 @@ def performDijkstra()
 		# the first element is the sequence number which Dijkstra's ignores
 		# The second element is an array of Neighbor class items corresponding to that node's neighbors
 		# We are iterating over vertexToRemove's neighbors, not our own.
-		if (graphInfo.has_key?(vertexToRemove))
+		if ($graphInfo.has_key?(vertexToRemove))
 			$graphInfo[vertexToRemove].at(1).each do |othersNeighbor| 
 				altDist = nodesToDistance[vertexToRemove] + othersNeighbor.cost
 
@@ -168,7 +160,7 @@ def performDijkstra()
 			end	
 		end
 	end
-	
+
 	# We have the cost to travel to all other nodes and also the previous node in their path.
 	# We want to find the next hop from us, the source node, and then assign that to our routing table.
 	$rtable.clear
@@ -187,7 +179,8 @@ end
 	
 # -------------- Helpers to do stuff to neighbors ----------------------- $
 def handleEntryAdd(destNode)
-	$neighbors.push(Neighbor.new(destNode, socket, 1))
+	STDOUT.puts "Neighbor being added"
+	$neighbors.push(Neighbor.new(destNode, 1))
 end
 
 # Handles deleting entries from the table - ASYMMETRIC

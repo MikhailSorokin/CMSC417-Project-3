@@ -34,7 +34,7 @@ def edgeb(cmd)
 	#Open connection towards destination IP from source)
 	clientSocket = TCPSocket.new(destIP, $nodeToPort[destNode])
 
-	$neighbors.push(Neighbor.new(destNode, clientSocket, 1))
+	$neighbors.push(Neighbor.new(destNode, 1))
 	clientSocket.write("APPLYEDGE" << " " << $hostname)
 	$nodeToSocket[destNode] = clientSocket 
 end
