@@ -38,17 +38,6 @@ class Neighbor
 		"#{name},#{cost}"
 	end
 
-	def to_s_refined
-		message = "#{name} #{seqNum} " << "[" 
-
-		neighborArray.each do |neighbor|
-			message <<  neighbor << " "
-		end
-
-		message.join!
-
-		message << "]"
-	end
 end
 
 # ----------------- Classes ------------------ #
@@ -101,7 +90,7 @@ def msgHandler()
 			case (cmd)		
 			#Acknowledgements
 			when "APPLYEDGE"; handleEntryAdd($socketToBuf[args[1]],args[1])
-			when "LSA"; receiveUpdatedNeighbors(args[1], args[2])
+			when "LSA"; receiveUpdatedNeighbors(args[1], args[2], args[3])
 			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
 		end
@@ -111,24 +100,23 @@ def msgHandler()
 			
 			performDijkstra()
 		end
-	end
+	endS
 end
 
-def receiveUpdatedNeighbors(seqNum, strategy)
-	$graphInfo[name] = Neighbor.new(name, nil, seqNum, )
+def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
+	#TODO - update here
 end
 
-def createLSAMessage(name, seqNum, neighbors)
-	message = "" << name << " " seqNum << " "
+def createLSAMessage(name, seqString, neighbors)
+	message = "" << name << " " << seqString << " "
 
 	neighbors.each do |neighbor|
-		message << neighbor.to_s_refined() << " "
+		message << neighbor.name << ";" << neighbor.cost  << ","
 	end
 
 	message.chop! #Remove the last character, which will be a space
-	message << "]"
 
-	if $nodeToSocket[name] != nil
+	if $nodeToSocket.has_key?(name)
 		$nodeToSocket[name].write("LSA " << message)
 	end
 end
@@ -148,12 +136,12 @@ def performDijkstra()
 	nodesToDistance[$hostname] = 0
 	nodeQueue.push($hostname)
 
-	while nodeQueue.empty? != nil
+	while !nodeQueue.empty?
 		#now use the neighbors array to see what is min distance
 		minCost = Float::INFINITY
 		vertexToRemove = nil
 
-		nodesToDistance.each do |node, cost|
+		nodeQueue.each do |node, cost|
 			if cost <= minCost
 				minCost = cost
 				vertexToRemove = node
@@ -166,14 +154,13 @@ def performDijkstra()
 			currDist = currentVertex + $neighbors[neighborNode].cost
 
 			if currDist < $neighbors[neighborNode].cost
-				nodesToDistance[neighborNode] = currDist
+				$neighbors[neighborNode].cost = currDist
 				#TODO - Path for TraceRoute?
 			end
 		end	
-
-
-		createLSAMessage(currentVertex, $update_time)
 	end
+
+	createLSAMessage($hostname, $update_time.to_s, $neighbors)
 
 end
 	
