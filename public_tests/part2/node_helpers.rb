@@ -6,7 +6,11 @@ $hostname = nil
 
 # ----------------------- Loop methods -----------------------#
 class Neighbor
+<<<<<<< HEAD
 	attr_accessor :name, :cost
+=======
+	attr_accessor :name, :socket, :cost
+>>>>>>> 1e104666470b6fa21ed6fdf1b418e3277128910f
 
 	def initialize(name, cost)
 		@name = name
@@ -89,6 +93,7 @@ def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
 	#Update the cost of the neighbors here with the sequence number
 	STDOUT.puts "LSA Message being received"
 	neighborGroup = neighbors.split(",")
+<<<<<<< HEAD
 	$graphInfo[origName].clear
 
 	neighborGroup.each do |neighbor|
@@ -97,6 +102,19 @@ def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
 		neighborCost = neighborArr[1]
 
 		$graphInfo[origName].push([seqNum,Neighbor.new(neighborName, neighborCost)])
+=======
+	if(!$graphInfo.has_key?(origName) || $graphInfo[origName][0] < origSeqNum.to_i)
+		$graphInfo[origName] = Array.new()
+		$graphInfo[origName][0] = origSeqNum.to_i
+		$graphInfo[origName][1] = Array.new()
+		neighborGroup.each do |neighbor|
+			neighborArr = neighbor.split(";")
+			neighborName = neighborArr[0]
+			neighborCost = neighborArr[1]
+
+			$graphInfo[origName][1].push(Neighbor.new(neighborName, nil, neighborCost))
+		end
+>>>>>>> 1e104666470b6fa21ed6fdf1b418e3277128910f
 	end
 end
 
@@ -121,7 +139,6 @@ def performDijkstra()
 	nodesToPrevious = {}
 
 	nodeQueue = []
-
 	$nodeToPort.each do |node, port|
 		nodesToDistance[node] = Float::INFINITY
 		nodeQueue.push(node)
@@ -140,7 +157,6 @@ def performDijkstra()
 				vertexToRemove = node
 			end
 		end
-
 		nodeQueue.delete(vertexToRemove)
 		# Graph info is a mapping from node name to that node's neighbor information
 		# A two element array contains the node's neighbor information
