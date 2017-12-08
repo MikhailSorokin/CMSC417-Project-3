@@ -1,4 +1,20 @@
+created LSA: LSA n2 2
 Accepting connection
 Receiving a message
-4
-1
+n2 handling this message: APPLYEDGE n1
+created LSA: LSA n2 4 n1;1
+flooding to n1
+created LSA: LSA n2 6 n1;1
+flooding to n1
+created LSA: LSA n2 8 n1;1,n3;1
+flooding to n1
+flooding to n3
+created LSA: LSA n2 10 n1;1,n3;1
+flooding to n1
+flooding to n3
+created LSA: LSA n2 12 n1;1,n3;1
+flooding to n1
+flooding to n3
+created LSA: LSA n2 14 n1;1,n3;1
+flooding to n1
+flooding to n3

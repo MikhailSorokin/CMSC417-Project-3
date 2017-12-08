@@ -18,7 +18,7 @@ class Neighbor
 	end
 	
 	def to_s
-		"#{name}\:#{cost}"
+		"#{name};#{cost},"
 	end
 
 end
@@ -73,6 +73,7 @@ def msgHandler()
 		$semaphore.synchronize {
 			if !$internalMsgQueue.empty?
 				str = $internalMsgQueue.pop
+				STDOUT.puts "#{$hostname} handling this message: #{str}"
 				args = str.split(" ")
 				cmd = args[0]
 				case (cmd)		
@@ -94,46 +95,46 @@ end
 
 def receiveUpdatedNeighbors(origName, origSeqNum, neighbors)
 	#Update the cost of the neighbors here with the sequence number
-	STDOUT.puts "LSA Message being received"
+	STDOUT.puts "#{$hostname} received these neighbors: #{neighbors}"
 	neighborGroup = neighbors.split(",")
 
 	if(!$graphInfo.has_key?(origName) || $graphInfo[origName][0] < origSeqNum.to_i)
 		$graphInfo[origName] = Array.new()
 		$graphInfo[origName][0] = origSeqNum.to_i
 		$graphInfo[origName][1] = Array.new()
-		neighborGroup.each do |neighbor|
-			neighborArr = neighbor.split(";")
+		neighborGroup.each do |neighbor_string|
+			neighborArr = neighbor_string.split(";")
 			neighborName = neighborArr[0]
 			neighborCost = neighborArr[1]
 
 			$graphInfo[origName][1].push(Neighbor.new(neighborName, neighborCost))
 		end
+
+		# We should flood the LSA we just processed
 	end
 end
 
-def createLSAMessage(name, seqString, nodesToDistance)
-	message = "" << name << " " << seqString << " "
-
-	puts nodesToDistance.length
-	puts $neighbors.length
+def createOwnLSA()
+	message = "LSA #{$hostname} #{$clock_val.to_s} "
 	str = ""
 	$neighbors.each do |neighbor|
-		message = neighbor.name << ";" << nodesToDistance[neighbor.name] << ","
+		message << neighbor.to_s
 	end
-
 	message.chop! #Remove the last character, which will be a space
+	puts "created LSA: #{message}"
 
-	puts message
+	floodMessage(message)
+end
 
+def floodMessage(message)
 	$neighbors.each do |neighbor|
-		puts "YO"
+		puts "flooding to #{neighbor.name}"
 		if $nodeToSocket.has_key?(neighbor.name)
 			$semaphore.synchronize {
-				puts "In here"
-				$nodeToSocket[neighbor.name].write("LSA" << " " << message)
+				$nodeToSocket[neighbor.name].write(message)
 			}
 		end
-	end 
+	end
 end
 
 #DIJKSTRA
@@ -183,15 +184,20 @@ def performDijkstra()
 	# We want to find the next hop from us, the source node, and then assign that to our routing table.
 	$rtable.clear
 	nodesToPrevious.each do |node, prev|
-		nextHop = nodesToPrevious[prev]
-		#TODO - need neighbors.name I Believe
-		while(!$neighbors.include?(nextHop))
+		puts "creating rtable entry for  #{node}"
+		if(prev == $hostname) # this means that the previous node is ourselves, so this node is a neighbor and is its own nexthop
+			$rtable.push(new RoutingInfo($hostname, node, node, nodesToDistance[node]))
+		else
 			nextHop = nodesToPrevious[prev]
+			#TODO - need neighbors.name I Believe
+			while(!$neighbors.include?(nextHop))
+				nextHop = nodesToPrevious[prev]
+			end
+			$rtable.push(new RoutingInfo($hostname, node, nextHop, nodesToDistance[node]))
 		end
-		$rtable.push(new RoutingInfo($hostname, node, nextHop, nodesToDistance[node]))
 	end
 
-	createLSAMessage($hostname, $update_time.to_s, nodesToDistance)
+	createOwnLSA()
 end
 	
 	
