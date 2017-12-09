@@ -1,17 +1,4 @@
 Sending LSA
-Sending LSA
 n1 handling this message: LSA n1 2 n2;1
 n1 handling this message: LSA n2 4 n1;1
-n1 handling this message: LSA n1 4 n2;1
 n1 handling this message: LSA n2 4 n1;1
-n1 handling this message: LSA n2 6 n1;1,n3;1
-n1 handling this message: LSA n3 6 n2;1
-n1 handling this message: LSA n2 6 n1;1,n3;1
-n1 handling this message: LSA n2 8 n1;1,n3;1
-n1 handling this message: LSA n2 8 n1;1,n3;1
-n1 handling this message: LSA n2 10 n1;1,n3;1
-
-listenging on 1 sockets}
-graphInfo: {"n1"=>[4, [n2;1]], "n2"=>[10, [n1;1, n3;1]], "n3"=>[6, [n2;1]]}
-writing on sockets to: ["n2"]}
-rtable: [n1,n2,n2,1]

@@ -41,12 +41,14 @@ def edgeb(cmd)
 end
 
 def dumptable(cmd)
+	performDijkstra()
 	out_file = File.new(cmd[0], "w+")
 	$rtable.each do |entry|
 		out_file.puts("#{entry}")
 	end
 
 	out_file.close
+	STDOUT.flush
 end
 
 def shutdown(cmd)

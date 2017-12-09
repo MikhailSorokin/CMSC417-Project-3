@@ -1,25 +1,10 @@
 Sending LSA
+finished DIjkstra at 2
 n2 handling this message: APPLYEDGE n1 127.0.0.1
 n2 handling this message: LSA n1 2 n2;1
 Sending LSA
-n2 handling this message: LSA n1 4 n2;1
 n2 handling this message: LSA n1 2 n2;1
 n2 handling this message: LSA n2 4 n1;1
-Sending LSA
-n2 handling this message: LSA n1 4 n2;1
-n2 handling this message: LSA n1 4 n2;1
 n2 handling this message: LSA n2 4 n1;1
 n2 handling this message: LSA n3 6 n2;1
-n2 handling this message: LSA n2 6 n1;1,n3;1
 n2 handling this message: LSA n3 6 n2;1
-n2 handling this message: LSA n2 6 n1;1,n3;1
-Sending LSA
-n2 handling this message: LSA n2 8 n1;1,n3;1
-n2 handling this message: LSA n3 6 n2;1
-n2 handling this message: LSA n2 8 n1;1,n3;1
-Sending LSA
-
-listenging on 2 sockets}
-graphInfo: {"n1"=>[4, [n2;1]], "n2"=>[8, [n1;1, n3;1]], "n3"=>[6, [n2;1]]}
-writing on sockets to: ["n1", "n3"]}
-rtable: [n2,n1,n1,1, n2,n3,n3,1]
