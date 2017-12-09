@@ -72,7 +72,7 @@ def msgHandler()
 
 				case (cmd)
 				when "APPLYEDGE"; handleEntryAdd(args[1], args[2])
-				when "LSA"; handleLSA(args[1], args[2], args[3])
+				when "LSA"; handleLSA(args[1], args[2], args[3], args[4])
 				else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 				end
 			end
@@ -91,29 +91,35 @@ def dijkstras()
 	end
 end
 
-def handleLSA(origName, origSeqNum, neighbors)
+def handleLSA(origName, origSeqNum, origChange, neighbors)
 	#Update the cost of the neighbors here with the sequence number
 	neighborGroup = neighbors.split(",")
 
 	if(!$graphInfo.has_key?(origName) || $graphInfo[origName][0] < origSeqNum.to_i)
-		$graphInfo[origName] = Array.new()
-		$graphInfo[origName][0] = origSeqNum.to_i
-		$graphInfo[origName][1] = Array.new()
-		neighborGroup.each do |neighbor_string|
-			neighborArr = neighbor_string.split(";")
-			neighborName = neighborArr[0]
-			neighborCost = neighborArr[1].to_i
+		if (origChange.to_i == 0)
+			$graphInfo[origName][0] = origSeqNum.to_i
+		else
+			$network_change = 1
+			$graphInfo[origName] = Array.new()
+			$graphInfo[origName][0] = origSeqNum.to_i
+			$graphInfo[origName][1] = Array.new()
+			neighborGroup.each do |neighbor_string|
+				neighborArr = neighbor_string.split(";")
+				neighborName = neighborArr[0]
+				neighborCost = neighborArr[1].to_i
 
-			$graphInfo[origName][1].push(Neighbor.new(neighborName, neighborCost))
+				$graphInfo[origName][1].push(Neighbor.new(neighborName, neighborCost))
+			end
 		end
 
-		floodMessage("LSA #{origName} #{origSeqNum} #{neighbors}`")
+		floodMessage("LSA #{origName} #{origSeqNum} #{origChange} #{neighbors}`")
 	end
 end
 
 def createOwnLSA()
 	puts "Sending LSA"
-	message = "LSA #{$hostname} #{$seq_val.to_s} "
+	message = "LSA #{$hostname} #{$seq_val.to_s} #{$local_change} "
+	$local_change = 0
 	$seq_val = $seq_val + 1;
 	str = ""
 	$neighbors.each do |neighbor|
@@ -134,6 +140,9 @@ end
 
 #DIJKSTRA
 def performDijkstra()
+	if($local_change == 0 && $network_change == 0)
+		return
+	end
 	#We have the neighbors, so just initialize all distances to Infinity
 	nodesToDistance = {}
 	nodesToPrevious = {}
@@ -182,6 +191,7 @@ def performDijkstra()
 			end
 		end
 	end
+	$network_change == 0
 	puts "finished DIjkstra at #{$clock_val}"
 end
 	
@@ -190,7 +200,7 @@ end
 def handleEntryAdd(destNode, srcIP)
 	clientSocket = TCPSocket.new(srcIP, $nodeToPort[destNode])
 	$nodeToSocket[destNode] = clientSocket
-	$rtable.push(RoutingInfo.new($hostname, destNode, destNode, 1))
+	$local_change = 1
 	$neighbors.push(Neighbor.new(destNode, 1))
 	createOwnLSA()
 end
@@ -198,10 +208,12 @@ end
 # Handles deleting entries from the table - ASYMMETRIC
 def handleEntryDelete(destNode)
 	$neighbors.delete_if {|n| n.name == destNode}
+	$local_change = 1
 end
 
 #Handles updating edge costs on the table
 def handleEntryUpdate(destNode, newcost)
 	i = $neighbors.index{|n| n.name == destNode}
 	$neighbors[i].cost = newcost
+	$local_change = 1
 end

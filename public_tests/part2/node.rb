@@ -41,7 +41,7 @@ def edgeb(cmd)
 	$neighbors.push(Neighbor.new(destNode, 1))
 
 	clientSocket.write("APPLYEDGE #{$hostname} #{srcIP}`")
-	$rtable.push(RoutingInfo.new($hostname, destNode, destNode, 1))
+	$local_change = 1
 	$nodeToSocket[destNode] = clientSocket
 	createOwnLSA()
 end
@@ -228,6 +228,8 @@ def setup(hostname, port, nodes, config)
 
 	$clock_val = 0
 	$seq_val = 0
+	$local_change = 0
+	$network_change = 0
 	$update_time = $clock_val + $updateInterval
 	
 	#A timer loop that updates the current clock and is used to synchronize updates
