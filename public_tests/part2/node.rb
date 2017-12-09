@@ -110,10 +110,12 @@ def status()
 	$neighbors.each do |n|
 		neighbornames.push(n.name)
 	end
-	STDOUT.print "Neighbors: "
+	status = "Neighbors: "
 	neighbornames.sort.each do |n|
-		STDOUT.print(n)
+		status << "#{n},"
 	end
+	status.chop!
+	STDOUT.puts(status)
 end
 
 
