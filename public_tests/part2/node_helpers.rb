@@ -138,7 +138,7 @@ def performDijkstra()
 	nodesToPrevious = {}
 
 	nodeQueue = []
-	$nodeToSocket.each do |node, sock|
+	$nodeToPort.each do |node, sock|
 		nodesToDistance[node] = Float::INFINITY
 		nodeQueue.push(node)
 	end
@@ -162,7 +162,7 @@ def performDijkstra()
 		# the first element is the sequence number which Dijkstra's ignores
 		# The second element is an array of Neighbor class items corresponding to that node's neighbors
 		# We are iterating over vertexToRemove's neighbors, not our own.
-		if($graphInfo.has_key(vertexToRemove))
+		if($graphInfo.has_key?(vertexToRemove))
 			$graphInfo[vertexToRemove].at(1).each do |othersNeighbor| 
 				altDist = nodesToDistance[vertexToRemove] + othersNeighbor.cost
 				if altDist < nodesToDistance[othersNeighbor.name]
@@ -171,12 +171,12 @@ def performDijkstra()
 				end
 			end
 		end
-		if(vertexToRemove != $hostname)
+		if(vertexToRemove != $hostname && nodesToDistance[vertexToRemove] != Float::INFINITY)
 			if (nodesToPrevious[vertexToRemove] == $hostname)
-				$rtable.unshift(RoutingInfo.new($hostname, vertexToRemove, vertexToRemove, nodesToDistance[vertexToRemove]))
+				$rtable.push(RoutingInfo.new($hostname, vertexToRemove, vertexToRemove, nodesToDistance[vertexToRemove]))
 				nodesToPrevious[vertexToRemove] = vertexToRemove
 			else
-				$rtable.unshift(RoutingInfo.new($hostname, vertexToRemove, nodesToPrevious[nodesToPrevious[vertexToRemove]], nodesToDistance[vertexToRemove]))
+				$rtable.push(RoutingInfo.new($hostname, vertexToRemove, nodesToPrevious[nodesToPrevious[vertexToRemove]], nodesToDistance[vertexToRemove]))
 				nodesToPrevious[vertexToRemove] = vertexToRemove
 			end
 		end

@@ -2,7 +2,12 @@ Sending LSA
 finished DIjkstra at 2
 Sending LSA
 finished DIjkstra at 4
-n3 handling this message: APPLYEDGE n2 127.0.0.1
-n3 handling this message: LSA n2 4 n1;1
 Sending LSA
-n3 handling this message: LSA n3 6 n2;1
+finished DIjkstra at 6
+Sending LSA
+finished DIjkstra at 8
+
+listenging on 0 sockets}
+graphInfo: {}
+writing on sockets to: []}
+rtable: []

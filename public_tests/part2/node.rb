@@ -43,7 +43,7 @@ end
 def dumptable(cmd)
 	performDijkstra()
 	out_file = File.new(cmd[0], "w+")
-	$rtable.each do |entry|
+	($rtable.sort {|x,y| x.dst <=> y.dst}).each do |entry|
 		out_file.puts("#{entry}")
 	end
 
@@ -83,7 +83,7 @@ def edged(cmd)
 	$nodeToSocket[destNode].close
 end
 
-def edgeu(cmd)
+def edgeU(cmd)
 	if cmd.length < 2
 		STDOUT.puts "Not enough arguments"		
 	end
