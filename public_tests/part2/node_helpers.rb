@@ -113,7 +113,8 @@ end
 
 def createOwnLSA()
 	puts "Sending LSA"
-	message = "LSA #{$hostname} #{$clock_val.to_s} "
+	message = "LSA #{$hostname} #{$seq_val.to_s} "
+	$seq_val = $seq_val + 1;
 	str = ""
 	$neighbors.each do |neighbor|
 		message << "#{neighbor.to_s},"
@@ -189,7 +190,9 @@ end
 def handleEntryAdd(destNode, srcIP)
 	clientSocket = TCPSocket.new(srcIP, $nodeToPort[destNode])
 	$nodeToSocket[destNode] = clientSocket
+	$rtable.push(RoutingInfo.new($hostname, destNode, destNode, 1))
 	$neighbors.push(Neighbor.new(destNode, 1))
+	createOwnLSA()
 end
 
 # Handles deleting entries from the table - ASYMMETRIC

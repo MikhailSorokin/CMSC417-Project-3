@@ -17,6 +17,10 @@ class RoutingInfo
 	def to_s
 		"#{src},#{dst},#{nextHop},#{distance}"
 	end
+
+	def ==(other)
+		self.dst == other.dst
+	end
 end
 
 # --------------------- Part 1 --------------------- # 
@@ -37,18 +41,20 @@ def edgeb(cmd)
 	$neighbors.push(Neighbor.new(destNode, 1))
 
 	clientSocket.write("APPLYEDGE #{$hostname} #{srcIP}`")
+	$rtable.push(RoutingInfo.new($hostname, destNode, destNode, 1))
 	$nodeToSocket[destNode] = clientSocket
+	createOwnLSA()
 end
 
 def dumptable(cmd)
-	performDijkstra()
+	STDOUT.flush
+	STDOUT.puts "@ #{$rtable} #{$clock_val}"
 	out_file = File.new(cmd[0], "w+")
 	($rtable.sort {|x,y| x.dst <=> y.dst}).each do |entry|
+		STDOUT.puts "@ #{entry}"
 		out_file.puts("#{entry}")
 	end
-
 	out_file.close
-	STDOUT.flush
 end
 
 def shutdown(cmd)
@@ -221,6 +227,7 @@ def setup(hostname, port, nodes, config)
 	end
 
 	$clock_val = 0
+	$seq_val = 0
 	$update_time = $clock_val + $updateInterval
 	
 	#A timer loop that updates the current clock and is used to synchronize updates
