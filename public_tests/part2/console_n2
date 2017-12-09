@@ -1,0 +1,114 @@
+<<<<<<< HEAD
+=======
+Sending LSA
+Sending LSA
+n2 handling this message: APPLYEDGE n1 127.0.0.1
+Sending LSA
+n2 handling this message: LSA n1 0 1 n2;1
+n2 handling this message: LSA n1 1 0 n2;1
+Sending LSA
+n2 handling this message: LSA n1 2 1 n2;5,n3;1
+n2 handling this message: LSA n3 0 1 n1;1
+finished DIjkstra at 4
+n2 handling this message: LSA n3 1 0 n1;1
+n2 handling this message: LSA n3 2 1 n1;1,n2;1
+n2 handling this message: LSA n2 0 1 n3;1
+n2 handling this message: LSA n2 1 0 n3;1
+n2 handling this message: LSA n2 2 1 n3;1,n1;1
+n2 handling this message: LSA n1 0 1 n2;1
+n2 handling this message: LSA n1 1 0 n2;1
+n2 handling this message: LSA n3 2 1 n1;1,n2;1
+n2 handling this message: LSA n2 0 1 n3;1
+n2 handling this message: LSA n2 1 0 n3;1
+n2 handling this message: LSA n2 2 1 n3;1,n1;1
+n2 handling this message: LSA n1 0 1 n2;1
+n2 handling this message: LSA n1 1 0 n2;1
+n2 handling this message: LSA n3 3 0 n1;1,n2;1
+n2 handling this message: LSA n3 3 0 n1;1,n2;1
+n2 handling this message: LSA n2 3 1 n3;1,n1;5
+n2 handling this message: LSA n1 2 1 n2;5,n3;1
+n2 handling this message: LSA n3 0 1 n1;1
+n2 handling this message: LSA n3 1 0 n1;1
+n2 handling this message: LSA n3 2 1 n1;1,n2;1
+n2 handling this message: LSA n1 2 1 n2;5,n3;1
+n2 handling this message: LSA n2 3 1 n3;1,n1;5
+n2 handling this message: LSA n3 3 0 n1;1,n2;1
+n2 handling this message: LSA n1 3 0 n2;5,n3;1
+n2 handling this message: LSA n1 3 0 n2;5,n3;1
+n2 handling this message: LSA n3 4 0 n1;1,n2;1
+Sending LSA
+finished DIjkstra at 6
+n2 handling this message: LSA n1 3 0 n2;5,n3;1
+n2 handling this message: LSA n3 4 0 n1;1,n2;1
+n2 handling this message: LSA n3 4 0 n1;1,n2;1
+n2 handling this message: LSA n1 4 0 n2;5,n3;1
+n2 handling this message: LSA n2 4 0 n3;1,n1;5
+n2 handling this message: LSA n1 4 0 n2;5,n3;1
+n2 handling this message: LSA n2 4 0 n3;1,n1;5
+Sending LSA
+n2 handling this message: LSA n1 4 0 n2;5,n3;1
+n2 handling this message: LSA n3 5 0 n1;1,n2;1
+n2 handling this message: LSA n1 5 0 n2;5,n3;1
+n2 handling this message: LSA n3 5 0 n1;1,n2;1
+finished DIjkstra at 8
+@ [n2,n3,n3,1, n2,n1,n3,2] 8
+@ n2,n1,n3,2
+@ n2,n3,n3,1
+n2 handling this message: LSA n1 5 0 n2;5,n3;1
+n2 handling this message: LSA n2 5 0 n3;1,n1;5
+n2 handling this message: LSA n3 5 0 n1;1,n2;1
+n2 handling this message: LSA n1 5 0 n2;5,n3;1
+n2 handling this message: LSA n2 5 0 n3;1,n1;5
+n2 handling this message: LSA n3 6 0 n1;1,n2;1
+Sending LSA
+finished DIjkstra at 10
+n2 handling this message: LSA n1 6 1 n2;5
+n2 handling this message: LSA n3 6 0 n1;1,n2;1
+n2 handling this message: LSA n3 6 0 n1;1,n2;1
+n2 handling this message: LSA n2 6 0 n3;1,n1;5
+n2 handling this message: LSA n3 7 0 n1;1,n2;1
+n2 handling this message: LSA n2 6 0 n3;1,n1;5
+n2 handling this message: LSA n1 6 1 n2;5
+n2 handling this message: LSA n1 6 1 n2;5
+n2 handling this message: LSA n3 7 0 n1;1,n2;1
+Sending LSA
+finished DIjkstra at 12
+n2 handling this message: LSA n3 7 0 n1;1,n2;1
+n2 handling this message: LSA n2 7 0 n3;1,n1;5
+n2 handling this message: LSA n1 7 0 n2;5
+n2 handling this message: LSA n2 7 0 n3;1,n1;5
+Sending LSA
+finished DIjkstra at 14
+n2 handling this message: LSA n1 7 0 n2;5
+n2 handling this message: LSA n2 8 0 n3;1,n1;5
+n2 handling this message: LSA n3 8 1 n2;1
+n2 handling this message: LSA n1 8 0 n2;5
+n2 handling this message: LSA n1 7 0 n2;5
+n2 handling this message: LSA n2 8 0 n3;1,n1;5
+Sending LSA
+n2 handling this message: LSA n3 8 1 n2;1
+n2 handling this message: LSA n1 8 0 n2;5
+n2 handling this message: LSA n3 8 1 n2;1
+n2 handling this message: LSA n1 8 0 n2;5
+n2 handling this message: LSA n1 9 0 n2;5
+finished DIjkstra at 16
+@ [n2,n3,n3,1, n2,n1,n1,5] 16
+@ n2,n1,n1,5
+@ n2,n3,n3,1
+n2 handling this message: LSA n2 9 0 n3;1,n1;5
+n2 handling this message: LSA n1 9 0 n2;5
+n2 handling this message: LSA n3 9 0 n2;1
+n2 handling this message: LSA n2 9 0 n3;1,n1;5
+n2 handling this message: LSA n1 9 0 n2;5
+n2 handling this message: LSA n3 9 0 n2;1
+n2 handling this message: LSA n3 9 0 n2;1
+n2 handling this message: LSA n1 10 0 n2;5
+Sending LSA
+n2 handling this message: LSA n3 10 0 n2;1
+finished DIjkstra at 18
+
+listenging on 2 sockets}
+graphInfo: {"n1"=>[10, [n2;5]], "n3"=>[10, [n2;1]], "n2"=>[9, [n3;1, n1;5]]}
+writing on sockets to: ["n3", "n1"]}
+rtable: [n2,n3,n3,1, n2,n1,n1,5]
+>>>>>>> 3422b99202c0b64ccd34e4a00841427ea6aa5cf1

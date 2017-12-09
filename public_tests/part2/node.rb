@@ -87,6 +87,7 @@ def edged(cmd)
 
 	#Connection needs to end here for that specific node
 	$nodeToSocket[destNode].close
+	$nodeToSocket.delete(destNode)
 end
 
 def edgeU(cmd)
@@ -103,15 +104,15 @@ def edgeU(cmd)
 end
 
 def status()
-	out_file.puts "Name: #{$hostname}"
-	out_file.puts "Port: #{$portNum}"
+	STDOUT.puts "Name: #{$hostname}"
+	STDOUT.puts "Port: #{$port}"
 	neighbornames = Array.new
 	$neighbors.each do |n|
 		neighbornames.push(n.name)
 	end
-	out_file.print "Neighbors: "
+	STDOUT.print "Neighbors: "
 	neighbornames.sort.each do |n|
-		out_file.print(n)
+		STDOUT.print(n)
 	end
 end
 
