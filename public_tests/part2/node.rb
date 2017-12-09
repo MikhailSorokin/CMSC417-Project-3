@@ -48,21 +48,21 @@ end
 
 def dumptable(cmd)
 	STDOUT.flush
-	STDOUT.puts "@ #{$rtable} #{$clock_val}"
+	#STDOUT.puts "@ #{$rtable} #{$clock_val}"
 	out_file = File.new(cmd[0], "w+")
 	($rtable.sort {|x,y| x.dst <=> y.dst}).each do |entry|
-		STDOUT.puts "@ #{entry}"
+		#STDOUT.puts "@ #{entry}"
 		out_file.puts("#{entry}")
 	end
 	out_file.close
 end
 
 def shutdown(cmd)
-	STDOUT.puts ""
-	STDOUT.puts "listenging on #{$serverSockets.length} sockets}"
-	STDOUT.puts "graphInfo: #{$graphInfo}"
-	STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}}"
-	STDOUT.puts "rtable: #{$rtable}"
+	#STDOUT.puts ""
+	#STDOUT.puts "listenging on #{$serverSockets.length} sockets}"
+	#STDOUT.puts "graphInfo: #{$graphInfo}"
+	#STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}}"
+	#STDOUT.puts "rtable: #{$rtable}"
 	#Create a connection for each TCP Socket again
 	STDOUT.flush
 	#$semaphore.synchronize {
@@ -153,7 +153,7 @@ def main()
 		when "EDGEB"; edgeb(args)
 		when "EDGED"; edged(args)
 		when "EDGEU"; edgeU(args)
-		when "DUMPTABLE"; sleep(1); dumptable(args)
+		when "DUMPTABLE"; sleep(1) dumptable(args)
 		when "SHUTDOWN"; shutdown(args)
 		when "STATUS"; status()
 		when "SENDMSG"; sendmsg(args)

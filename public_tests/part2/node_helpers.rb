@@ -66,7 +66,7 @@ def msgHandler()
 		#$semaphore.synchronize {
 			if !$internalMsgQueue.empty?
 				str = $internalMsgQueue.pop
-				STDOUT.puts "#{$hostname} handling this message: #{str}"
+				#STDOUT.puts "#{$hostname} handling this message: #{str}"
 				args = str.split(" ")
 				cmd = args[0]
 
@@ -117,7 +117,7 @@ def handleLSA(origName, origSeqNum, origChange, neighbors)
 end
 
 def createOwnLSA()
-	puts "Sending LSA"
+	#puts "Sending LSA"
 	message = "LSA #{$hostname} #{$seq_val.to_s} #{$local_change} "
 	$local_change = 0
 	$seq_val = $seq_val + 1;
@@ -192,7 +192,7 @@ def performDijkstra()
 		end
 	end
 	$network_change == 0
-	puts "finished DIjkstra at #{$clock_val}"
+	#puts "finished DIjkstra at #{$clock_val}"
 end
 	
 	
