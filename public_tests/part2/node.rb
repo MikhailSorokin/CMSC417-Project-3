@@ -87,6 +87,7 @@ def edged(cmd)
 
 	#Connection needs to end here for that specific node
 	$nodeToSocket[destNode].close
+	$nodeToSocket.delete(destNode)
 end
 
 def edgeU(cmd)
