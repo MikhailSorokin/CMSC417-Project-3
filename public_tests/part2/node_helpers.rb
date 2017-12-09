@@ -200,6 +200,7 @@ end
 def handleEntryAdd(destNode, srcIP)
 	clientSocket = TCPSocket.new(srcIP, $nodeToPort[destNode])
 	$nodeToSocket[destNode] = clientSocket
+	$rtable.push(RoutingInfo.new($hostname, destNode, destNode, 1))
 	$local_change = 1
 	$neighbors.push(Neighbor.new(destNode, 1))
 	createOwnLSA()
