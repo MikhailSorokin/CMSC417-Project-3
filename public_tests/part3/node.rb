@@ -121,7 +121,15 @@ end
 
 # --------------------- Part 3 --------------------- # 
 def sendmsg(cmd)
-	STDOUT.puts "SENDMSG: not implemented"
+	if cmd.length < 2
+		STDOUT.puts "Not enough arguments"		
+	end
+
+	#Parse
+	destNode = cmd[0]
+	msgArr = cmd[1..-1]
+
+	writeMessage(destNode, msgArr)
 end
 
 def ping(cmd)

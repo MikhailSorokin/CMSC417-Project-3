@@ -73,6 +73,7 @@ def msgHandler()
 				case (cmd)
 				when "APPLYEDGE"; handleEntryAdd(args[1], args[2])
 				when "LSA"; handleLSA(args[1], args[2], args[3], args[4])
+				when "MSG"; readMessage(args[1], args[2], args[3..-1])
 				else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 				end
 			end
@@ -130,11 +131,57 @@ def createOwnLSA()
 	floodMessage("#{message}`")
 end
 
+def readMessage(src, dst, msgArr)
+	if(dst == $hostname)
+		# We are the destination and should read the message
+		# TODO - handle message fragments to reconstruct original payload
+		msg = ""
+
+		msgArr.each do |word|
+			msg << "#{word} "
+		end
+		msg.chop!
+
+		# Do we output to console? Also, verify it's SENDMSG and not SNDMSG or something like that.
+		STDOUT.puts "SENDMSG: [#{src}] −− > [#{msg}]"
+	else
+		msg = "MSG #{dst} #{src} "
+
+		msgArr.each do |word|
+			msg << "#{word} "
+		end
+		msg.chop!
+
+		# If the payload needed to be fragmented, the src node would have done so, so we don't have to fragment here.
+		relayMessage(dst, msg)
+	end
+end
+
+def writeMessage(dst, msgArr)
+	# The main loop split the message by ' ' characters. We should add those back in?
+	msg = "MSG #{dst} #{$hostname} "
+	msgArr.each do |word|
+		msg << "#{word} "
+	end
+	msg.chop!
+
+	# TODO - If msg.length > $maxPayload we need to fragment the payload over several messages.
+	relayMessage(dst, msg)
+end
+
 def floodMessage(message)
 	$neighbors.each do |neighbor|
 		if $nodeToSocket.has_key?(neighbor.name)
 			$nodeToSocket[neighbor.name].write(message)
 		end
+	end
+end
+
+def relayMessage(dst, message)
+	i = $rtable.index{|n| n.dst == dst}
+	# TODO - I think if i isn't a valid index, then we don't know how to route to dst and we can output the failure message
+	if $nodeToSocket.has_key?($rtable[i].nextHop)
+		$nodeToSocket[$rtable[i].nextHop].write(message)
 	end
 end
 
