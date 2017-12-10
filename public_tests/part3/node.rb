@@ -132,8 +132,48 @@ def sendmsg(cmd)
 	writeMessage(destNode, msgArr)
 end
 
+class PingMessage
+	attr_accessor :id, :time
+
+	def initialize(id, time)
+		@id = id
+		@time = time
+	end
+end
+
 def ping(cmd)
-	STDOUT.puts "PING: not implemented"
+	if cmd.length < 3
+		STDOUT.puts "Not enough arguments"		
+	end
+
+	#Parse
+	destNode = cmd[0]
+	numPings = cmd[1]
+	delay = cmd[2]
+
+	$pingSeqNum = 0
+	for i in 1..numPings.to_i()
+		sendPing(destNode)
+		$pingSeqNum = $pingSeqNum + 1
+		sleep(delay.to_i())
+	end
+end
+
+def sendPing(dst)
+	$nodeToSocket[dst].write("RECVPING" << " " << $hostname)
+	$pingQueue.push(PingMessage.new(seqID, $clock_val))
+end
+
+def receivePingMsg(target)
+	pingMsg = $pingQueue.pop()
+	rtt = $clock_val - pingMsg.time 
+	#Need to run this in the main thread so that the ping can detect timeout
+	if rtt >= $pingTimeout
+		STDOUT.puts "PING ERROR: HOST UNREACHABLE"
+	else
+
+		STDOUT.puts pingMsg.id << " " << target << " " << rtt 
+	end
 end
 
 def traceroute(cmd)
@@ -253,6 +293,7 @@ def setup(hostname, port, nodes, config)
 	}
 	
 	$internalMsgQueue = Queue.new
+	$pingQueue = Queue.new
 
 	Thread.new{listeningloop()}
 	Thread.new{receivingloop()}

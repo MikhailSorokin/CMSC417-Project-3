@@ -63,22 +63,26 @@ end
 #Need to parse messages and clear buffer as messages are read
 def msgHandler()
 	loop do
-		#$semaphore.synchronize {
-			if !$internalMsgQueue.empty?
-				str = $internalMsgQueue.pop
-				#STDOUT.puts "#{$hostname} handling this message: #{str}"
-				args = str.split(" ")
-				cmd = args[0]
+		if !$internalMsgQueue.empty?
+			str = $internalMsgQueue.pop
+			#STDOUT.puts "#{$hostname} handling this message: #{str}"
+			args = str.split(" ")
+			cmd = args[0]
 
-				case (cmd)
-				when "APPLYEDGE"; handleEntryAdd(args[1], args[2])
-				when "LSA"; handleLSA(args[1], args[2], args[3], args[4])
-				when "MSG"; readMessage(args[1], args[2], args[3..-1])
-				else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
-				end
+			case (cmd)
+			when "APPLYEDGE"; handleEntryAdd(args[1], args[2])
+			when "LSA"; handleLSA(args[1], args[2], args[3], args[4])
+			when "MSG"; readMessage(args[1], args[2], args[3..-1])
+			when "RECVPING"; ackPing(args[1])
+			when "ACKPING"; receivePingMsg(args[1])
+			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
-		#}
+		end
 	end
+end
+
+def ackPing(dst)
+	nodeToSocket[dst].write("ACKPING" << " " << dst)
 end
 
 def dijkstras()
@@ -143,7 +147,7 @@ def readMessage(src, dst, msgArr)
 		msg.chop!
 
 		# Do we output to console? Also, verify it's SENDMSG and not SNDMSG or something like that.
-		STDOUT.puts "SENDMSG: [#{src}] −− > [#{msg}]"
+		STDOUT.puts "SENDMSG: [#{src}] -- > [#{msg}]"
 	else
 		msg = "MSG #{dst} #{src} "
 
