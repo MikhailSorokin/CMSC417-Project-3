@@ -73,16 +73,12 @@ def msgHandler()
 			when "APPLYEDGE"; handleEntryAdd(args[1], args[2])
 			when "LSA"; handleLSA(args[1], args[2], args[3], args[4])
 			when "MSG"; readMessage(args[1], args[2], args[3..-1])
-			when "RECVPING"; ackPing(args[1])
-			when "ACKPING"; receivePingMsg(args[1])
+			when "PING"; readPing(args[1], args[2], args[3])
+			when "PONG"; readPong(args[1])
 			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
 		end
 	end
-end
-
-def ackPing(dst)
-	nodeToSocket[dst].write("ACKPING" << " " << dst)
 end
 
 def dijkstras()
@@ -135,57 +131,11 @@ def createOwnLSA()
 	floodMessage("#{message}`")
 end
 
-def readMessage(src, dst, msgArr)
-	if(dst == $hostname)
-		# We are the destination and should read the message
-		# TODO - handle message fragments to reconstruct original payload
-		msg = ""
-
-		msgArr.each do |word|
-			msg << "#{word} "
-		end
-		msg.chop!
-
-		# Do we output to console? Also, verify it's SENDMSG and not SNDMSG or something like that.
-		STDOUT.puts "SENDMSG: [#{src}] -- > [#{msg}]"
-	else
-		msg = "MSG #{dst} #{src} "
-
-		msgArr.each do |word|
-			msg << "#{word} "
-		end
-		msg.chop!
-
-		# If the payload needed to be fragmented, the src node would have done so, so we don't have to fragment here.
-		relayMessage(dst, msg)
-	end
-end
-
-def writeMessage(dst, msgArr)
-	# The main loop split the message by ' ' characters. We should add those back in?
-	msg = "MSG #{dst} #{$hostname} "
-	msgArr.each do |word|
-		msg << "#{word} "
-	end
-	msg.chop!
-
-	# TODO - If msg.length > $maxPayload we need to fragment the payload over several messages.
-	relayMessage(dst, msg)
-end
-
 def floodMessage(message)
 	$neighbors.each do |neighbor|
 		if $nodeToSocket.has_key?(neighbor.name)
 			$nodeToSocket[neighbor.name].write(message)
 		end
-	end
-end
-
-def relayMessage(dst, message)
-	i = $rtable.index{|n| n.dst == dst}
-	# TODO - I think if i isn't a valid index, then we don't know how to route to dst and we can output the failure message
-	if $nodeToSocket.has_key?($rtable[i].nextHop)
-		$nodeToSocket[$rtable[i].nextHop].write(message)
 	end
 end
 
@@ -245,7 +195,92 @@ def performDijkstra()
 	$network_change == 0
 	#puts "finished DIjkstra at #{$clock_val}"
 end
-	
+
+# -------------- Messages, Pings, and Traceroutes ----------------------- #
+
+def relayMessage(dst, message)
+	i = $rtable.index{|n| n.dst == dst}
+	# return true or false so that correct error message can be output when dst is unreachable
+	if $nodeToSocket.has_key?($rtable[i].nextHop)
+		$nodeToSocket[$rtable[i].nextHop].write(message)
+		return true
+	else
+		return false
+	end
+end
+
+def writeMessage(dst, msgArr)
+	# The main loop split the message by ' ' characters. We should add those back in?
+	msg = "MSG #{dst} #{$hostname} "
+	msgArr.each do |word|
+		msg << "#{word} "
+	end
+	msg.chop!
+
+	# TODO - If msg.length > $maxPayload we need to fragment the payload over several messages.
+	if(!relayMessage(dst, msg))
+		STDOUT.puts "SENDMSG ERROR: HOST UNREACHABLE"
+	end
+end
+
+
+def readMessage(dst, src, msgArr)
+	if(dst == $hostname)
+		# We are the destination and should read the message
+		# TODO - handle message fragments to reconstruct original payload
+		msg = ""
+
+		msgArr.each do |word|
+			msg << "#{word} "
+		end
+		msg.chop!
+
+		# Do we output to console? Also, verify it's SENDMSG and not SNDMSG or something like that.
+		STDOUT.puts "SENDMSG: [#{src}] -- > [#{msg}]"
+	else
+		msg = "MSG #{dst} #{src} "
+
+		msgArr.each do |word|
+			msg << "#{word} "
+		end
+		msg.chop!
+
+		# If the payload needed to be fragmented, the src node would have done so, so we don't have to fragment here.
+		relayMessage(dst, msg)
+	end
+end
+
+def writePing(dst, seqNum)
+	msg = "PING #{dst} #{hostname} #{seqNum}"
+	if (relayMessage(dst, msg))
+		pm = PingMessage.new(dst, seqNum, $clock_val)
+		$pingQueue.push(pm)
+		Thread.new(){
+			sleep($pingTimeout)
+		    if($pingQueue.delete(pm) != nil)
+		    	STDOUT.puts "PING ERROR: HOST UNREACHABLE"
+		    end
+		}
+	else
+		STDOUT.puts "PING ERROR: HOST UNREACHABLE"
+	end
+end
+
+def readPing(dst, src, seqNum)
+	if(dst == $hostname)
+		relayMessage(src,"PONG #{src} #{dst} #{seqNum}")
+	else
+		relayMessage(dst,"PING #{dst} #{src} #{seqNum}")
+	end
+end	
+
+def readPong(dst, seqNum)
+	pm = $pingQueue.delete(PingMessage.new(dst, seqNum, nil))
+	if(pm != nil) # What happens if we get an acknowledgement for a ping we have no record of?
+		rtt = $clock_val - pm.time
+		STDOUT.puts "#{seqNum} #{dst} #{rtt}"
+	end
+end
 	
 # -------------- Helpers to do stuff to neighbors ----------------------- $
 def handleEntryAdd(destNode, srcIP)

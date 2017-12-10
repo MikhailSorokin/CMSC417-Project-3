@@ -133,11 +133,15 @@ def sendmsg(cmd)
 end
 
 class PingMessage
-	attr_accessor :id, :time
+	attr_accessor :dst, :seqNum, :time
 
-	def initialize(id, time)
-		@id = id
+	def initialize(dst, seqNum, time)
+		@seqNum = seqNum
 		@time = time
+	end
+
+	def ==(other)
+		self.dst == other.dst && self.seqNum == other.seqNum
 	end
 end
 
@@ -151,17 +155,10 @@ def ping(cmd)
 	numPings = cmd[1]
 	delay = cmd[2]
 
-	$pingSeqNum = 0
 	for i in 1..numPings.to_i()
-		sendPing(destNode)
-		$pingSeqNum = $pingSeqNum + 1
+		writePing(destNode, i-1)
 		sleep(delay.to_i())
 	end
-end
-
-def sendPing(dst)
-	$nodeToSocket[dst].write("RECVPING" << " " << $hostname)
-	$pingQueue.push(PingMessage.new(seqID, $clock_val))
 end
 
 def receivePingMsg(target)
@@ -169,7 +166,7 @@ def receivePingMsg(target)
 	rtt = $clock_val - pingMsg.time 
 	#Need to run this in the main thread so that the ping can detect timeout
 	if rtt >= $pingTimeout
-		STDOUT.puts "PING ERROR: HOST UNREACHABLE"
+		
 	else
 
 		STDOUT.puts pingMsg.id << " " << target << " " << rtt 
