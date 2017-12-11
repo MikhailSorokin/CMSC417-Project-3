@@ -157,7 +157,7 @@ def ping(cmd)
 
 	for i in 1..numPings.to_i()
 		writePing(destNode, i - 1)
-		sleep(delay.to_i())
+		sleep($delay.to_i())
 	end
 end
 
@@ -282,19 +282,21 @@ def setup(hostname, port, nodes, config)
 	$network_change = 0
 	$update_time = $clock_val + $updateInterval
 	
+	$destInd = 0
+
 	#A timer loop that updates the current clock and is used to synchronize updates
 	#between nodes
 
 	#UPDATED CODE
 	$clock_lock = Mutex.new()
-		$tick = 0.5
+		$tick = 1
 
 		t = Thread.new {
 		while(true)
-		sleep($tick)
-		$clock_lock.synchronize{
-	   		$clock_val = $clock_val + $tick
-		}
+			sleep($tick)
+			$clock_lock.synchronize {
+	   			$clock_val = $clock_val + $tick
+			}
 		end
 	}
 	

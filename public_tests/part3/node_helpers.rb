@@ -197,6 +197,7 @@ def performDijkstra()
 			prev = nodesToPrevious[vertexToRemove]
 			$rtable.push(RoutingInfo.new(vertexToRemove, nodesToPrevious[vertexToRemove], nodesToDistance[vertexToRemove]))
 		end
+		
 	end
 	$network_change = 0
 end
@@ -204,6 +205,10 @@ end
 # -------------- Messages, Pings, and Traceroutes ----------------------- #
 
 def relayMessage(nextHop, message)
+	STDOUT.flush
+	STDOUT.puts "#{nextHop} and Messagess #{message}"
+	STDOUT.flush
+
 	if $nodeToSocket.has_key?(nextHop)
 		$nodeToSocket[nextHop].write(message)
 		return true
@@ -260,14 +265,15 @@ def writePing(dst, seqNum)
 	if (i != nil && relayMessage($rtable[i].nextHop, message))
 		pm = PingMessage.new(dst, seqNum, $clock_val)
 		$pingQueue.push(pm)
-		Thread.new(){
+		
+		Thread.new() {
 			sleep($pingTimeout)
 		    if($pingQueue.pop != nil)
-		    	STDOUT.puts "PING ERROR: HOST UNREACHABLE"
+		    	STDOUT.puts "good PING ERROR: HOST UNREACHABLE"
 		    end
 		}
 	else
-		STDOUT.puts "PING ERROR: HOST UNREACHABLE"
+		STDOUT.puts "bad PING ERROR: HOST UNREACHABLE"
 	end
 end
 
@@ -275,17 +281,15 @@ def readPing(dst, src, seqNum)
 	if(dst == $hostname)
 		nextMsg = "PONG #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == src}
-		if i == nil
-			#STDOUT.puts "Nil index"
-		else
-			prevHop = $rtable[i].nextHop	
-			relayMessage(prevHop, nextMsg)
+		if (i != nil && relayMessage($rtable[i].nextHop, nextMsg))
+
 		end
 	else
 		nextMsg = "PING #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == dst}
-		nextHop = $rtable[i].nextHop
-		relayMessage(nextHop, nextMsg)
+		if (i != nil && relayMessage($rtable[i].nextHop, nextMsg))
+			
+		end
 	end
 end	
 
@@ -295,20 +299,18 @@ def readPong(dst, src, seqNum)
 	else
 		nextMsg = "PONG #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == src}
-		if i == nil
-			STDOUT.puts "Nil index"
-		else
-			prevHop = $rtable[i].nextHop	
-			relayMessage(prevHop, nextMsg)
+		if (i != nil && relayMessage($rtable[i].nextHop, nextMsg))
+			
 		end
 	end
 end	
 
 def finalPong(dst, seqNum)
+	STDOUT.flush
 	if !$pingQueue.empty?
 		pm = $pingQueue.pop
 		rtt = $clock_val - pm.time.to_i()
-		STDOUT.puts "#{seqNum} #{dst} #{rtt}"	
+		STDOUT.puts "#{seqNum} #{dst} #{rtt}"
 		STDOUT.flush
 	end
 end
