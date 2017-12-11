@@ -72,6 +72,8 @@ def msgHandler()
 			when "MSG"; readMessage(args[1], args[2], args[3..-1])
 			when "PING"; readPing(args[1], args[2], args[3])
 			when "PONG"; readPong(args[1], args[2], args[3])
+			when "FORWARDROUTE"; startRoute(args[1], args[2], args[3])
+			when "BACKROUTE"; backRoute(args[1], args[2], args[3])
 			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
 		end
@@ -247,6 +249,7 @@ def readMessage(dst, src, msgArr)
 	end
 end
 
+# ------------------------------ PING/PONG ------------------------------ #
 def writePing(dst, seqNum)
 	i = $rtable.index{|n| n.dst == dst}
 	message = "PING #{dst} #{$hostname} #{seqNum}`"
@@ -305,8 +308,105 @@ def finalPong(dst, seqNum)
 		STDOUT.flush
 	end
 end
+
+# ---------------------------- Trace Route -------------------------------- #
+class HopMessage
+	attr_accessor :hopCount, :src, :timeToNode
+
+	def initialize(hopCount, src, timeToNode)
+		@hopCount = hopCount
+		@src = src
+		@timeToNode = timeToNode
+	end
+
+	def to_s
+		"#{hopCount} #{src} #{timeToNode}"
+	end
+end
+
+def startRoute(dst)
+	i = $rtable.index{|n| n.dst == dst}
+	message = "FORWARDROUTE 0 #{$hostname} #{$clock_val}`"
+	if (i != nil && relayMessage($rtable[i].nextHop, message))
+		Thread.new(){
+			sleep($pingTimeout)
+		    if($receivedFinalMessage == 0)
+		    	STDOUT.puts "#{$pingTimeout} ON #{$allTraceRouteInfo.length}"
+		    end
+		}
+	else
+    	STDOUT.puts "#{$pingTimeout} ON #{$allTraceRouteInfo.length}"
+	end
+end
+
+#I want to read a route and then send one back to destination immediately
+#So we would write two messages
+def readRoute(dst, hopCount, src, lastTime)
+	if(dst == $hostname)
+		#When I have arrived at destination, JUST keep going back, no more forward
+		#Messages
+		nextMsg = "BACKROUTE #{hopCount} #{newHopCount} #{src} #{lastTime} 1`"
+		i = $rtable.index{|n| n.dst == src}
+		if i == nil
+			#STDOUT.puts "Nil index"
+		else
+			prevHop = $rtable[i].nextHop	
+			relayMessage(prevHop, nextMsg)
+		end
+	else
+		#Send a message forward...
+		elapsedTime = lastTime + $clock_val
+		newHopCount = hopCount.to_i() + 1
+		nextMsg = "FORWARDROUTE #{dst} #{newHopCount} #{src} #{elapsedTime}`"
+		i = $rtable.index{|n| n.dst == dst}
+		nextHop = $rtable[i].nextHop
+		relayMessage(nextHop, nextMsg)
+
+		#Send a message backwards...
+		nextMsg = "BACKROUTE #{hopCount} #{newHopCount} #{src} #{lastTime} 0`"
+		i = $rtable.index{|n| n.dst == src}
+		if i == nil
+			#STDOUT.puts "Nil index"
+		else
+			prevHop = $rtable[i].nextHop	
+			relayMessage(prevHop, nextMsg)
+		end
+	end
+end	
+
+def readEnd(dst, hopCount, src, timeToNode, reachedEnd)
+	if (src == $hostname)
+		finalTraceRead(hopCount, src, timeToNode, reachedEnd)
+	else
+		nextMsg = "BACKROUTE #{dst} #{hopCount} #{src} #{timeToNode} 0`"
+		i = $rtable.index{|n| n.dst == src}
+		if i == nil
+			#STDOUT.puts "Nil index"
+		else
+			prevHop = $rtable[i].nextHop	
+			relayMessage(prevHop, nextMsg)
+		end
+	end
+end	
+
+#Once I have received every single TraceRoute information, I want to 
+#make sure I have reached the destination node and came back, and 
+#would print ALL of the route information from my current starting place
+def finalTraceRead(hopCount, src, timeToNode)
+	#10 is the max hop count - according to specs, make sure it doesn't exceed 
+	#that or we would be going for  a while
+	if (timeToNode == 0 && hopCount < 10)
+	$allTraceRouteInfo.push(HopMessage.new(hopCount, src, timeToNode))
+	else
+		($allTraceRouteInfo.sort {|x,y| x.hopCount <=> y.hopCount}).each do |entry|
+			STDOUT.puts("#{entry}")
+		end
+		STDOUT.flush
+		$receivedFinalMessage = 1
+	end
+end
 	
-# -------------- Helpers to do stuff to neighbors ----------------------- $
+# -------------------- Helpers to do stuff to neighbors --------------------- #
 def handleEntryAdd(destNode, srcIP)
 	clientSocket = TCPSocket.new(srcIP, $nodeToPort[destNode])
 	$nodeToSocket[destNode] = clientSocket

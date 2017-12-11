@@ -162,7 +162,18 @@ def ping(cmd)
 end
 
 def traceroute(cmd)
-	STDOUT.puts "TRACEROUTE: not implemented"
+	if cmd.length < 1
+		STDOUT.puts "Not enough arguments"		
+	end
+
+	#Parse
+	destNode = cmd[0]
+
+	#Don't add on to existing route infos, just clear every time method is called
+	$allTraceRouteInfo.clear
+	$receivedFinalMessage = 0
+
+	startRoute(destNode)
 end
 
 # --------------------- Part 4 --------------------- # 
@@ -225,6 +236,9 @@ def setup(hostname, port, nodes, config)
 	$graphEntry = [[]]
 	$neighbors = []
 
+	#Arrays for helper methods
+	$allTraceRouteInfo = []
+
 	File.open(nodes, "r") do |f|
 		f.each_line do |line|
 			line = line.strip()
@@ -269,12 +283,19 @@ def setup(hostname, port, nodes, config)
 	$update_time = $clock_val + $updateInterval
 	
 	#A timer loop that updates the current clock and is used to synchronize updates
-	#between nodes - Mike
-	t = Thread.new(){
-	while(true)
-	   sleep(1)
-	   $clock_val = $clock_val + 1
-	end
+	#between nodes
+
+	#UPDATED CODE
+	$clock_lock = Mutex.new()
+		$tick = 0.5
+
+		t = Thread.new {
+		while(true)
+		sleep($tick)
+		$clock_lock.synchronize{
+	   		$clock_val = $clock_val + $tick
+		}
+		end
 	}
 	
 	$internalMsgQueue = Queue.new
