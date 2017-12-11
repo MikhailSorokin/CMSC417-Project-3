@@ -135,6 +135,7 @@ class PingMessage
 	attr_accessor :dst, :seqNum, :time
 
 	def initialize(dst, seqNum, time)
+		@dst = dst
 		@seqNum = seqNum
 		@time = time
 	end
