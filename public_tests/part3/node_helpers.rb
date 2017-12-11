@@ -199,11 +199,9 @@ end
 # -------------- Messages, Pings, and Traceroutes ----------------------- #
 
 def relayMessage(src, message)
-	i = $rtable.index{|n| n.src == src}
-	# return true or false so that correct error message can be output when dst is unreachable
-	if $nodeToSocket.has_key?($rtable[i].nextHop)
-		puts $rtable[i].nextHop
-		$nodeToSocket[$rtable[i].nextHop].write(message)
+	if $nodeToSocket.has_key?(src)
+		puts "Sending Message from source: #{src} with title #{message}"
+		$nodeToSocket[src].write(message)
 		return true
 	else
 		return false
@@ -252,8 +250,10 @@ def readMessage(dst, src, msgArr)
 end
 
 def writePing(dst, seqNum)
-	msg = "PING #{dst} #{$hostname} #{seqNum}"
-	if (relayMessage($hostname, msg))
+	i = $rtable.index{|n| n.src == $hostname}
+	nextHop = $rtable[i].nextHop
+	message = "PING #{dst} " << nextHop << " #{seqNum}`"
+	if (relayMessage(nextHop, message))
 		pm = PingMessage.new(dst, seqNum, $clock_val)
 		$pingQueue.push(pm)
 		Thread.new(){
@@ -268,13 +268,23 @@ def writePing(dst, seqNum)
 end
 
 def readPing(dst, src, seqNum)
-	STDOUT.puts "HERE and"
-	if(dst == $hostname)
+	sleep(1)
+	#STDOUT.puts $hostname
+	#STDOUT.puts "HERE and"
+	#STDOUT.puts "graphInfo: #{$graphInfo}"
+	STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}}"
+	#STDOUT.flush
+	#STDOUT.puts "rtable: #{$rtable}"
+	if(dst == src)
 		STDOUT.puts "PONG!"
-		relayMessage(src,"PONG #{src} #{dst} #{seqNum}")
+		relayMessage(src, "PONG #{src} #{dst} #{seqNum}`")
 	else
 		STDOUT.puts "PING!"
-		relayMessage(src,"PING #{dst} #{src} #{seqNum}")
+		i = $rtable.index{|n| n.src == $hostname}
+		#STDOUT.puts $rtable
+		nextHop = $rtable[i].nextHop
+		message = "PING #{dst} " << nextHop << " #{seqNum}`"
+		relayMessage(nextHop, message)
 	end
 end	
 

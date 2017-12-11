@@ -156,20 +156,8 @@ def ping(cmd)
 	delay = cmd[2]
 
 	for i in 1..numPings.to_i()
-		writePing(destNode, i-1)
+		writePing(destNode, i - 1)
 		sleep(delay.to_i())
-	end
-end
-
-def receivePingMsg(target)
-	pingMsg = $pingQueue.pop()
-	rtt = $clock_val - pingMsg.time 
-	#Need to run this in the main thread so that the ping can detect timeout
-	if rtt >= $pingTimeout
-		
-	else
-
-		STDOUT.puts pingMsg.id << " " << target << " " << rtt 
 	end
 end
 
