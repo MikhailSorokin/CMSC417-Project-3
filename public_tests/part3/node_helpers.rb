@@ -198,10 +198,11 @@ end
 
 # -------------- Messages, Pings, and Traceroutes ----------------------- #
 
-def relayMessage(dst, message)
-	i = $rtable.index{|n| n.dst == dst}
+def relayMessage(src, message)
+	i = $rtable.index{|n| n.src == src}
 	# return true or false so that correct error message can be output when dst is unreachable
 	if $nodeToSocket.has_key?($rtable[i].nextHop)
+		puts $rtable[i].nextHop
 		$nodeToSocket[$rtable[i].nextHop].write(message)
 		return true
 	else
@@ -251,8 +252,8 @@ def readMessage(dst, src, msgArr)
 end
 
 def writePing(dst, seqNum)
-	msg = "PING #{dst} #{hostname} #{seqNum}"
-	if (relayMessage(dst, msg))
+	msg = "PING #{dst} #{$hostname} #{seqNum}"
+	if (relayMessage($hostname, msg))
 		pm = PingMessage.new(dst, seqNum, $clock_val)
 		$pingQueue.push(pm)
 		Thread.new(){
@@ -267,10 +268,13 @@ def writePing(dst, seqNum)
 end
 
 def readPing(dst, src, seqNum)
+	STDOUT.puts "HERE and"
 	if(dst == $hostname)
+		STDOUT.puts "PONG!"
 		relayMessage(src,"PONG #{src} #{dst} #{seqNum}")
 	else
-		relayMessage(dst,"PING #{dst} #{src} #{seqNum}")
+		STDOUT.puts "PING!"
+		relayMessage(src,"PING #{dst} #{src} #{seqNum}")
 	end
 end	
 
