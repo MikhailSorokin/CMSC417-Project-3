@@ -71,7 +71,7 @@ def msgHandler()
 			when "LSA"; handleLSA(args[1], args[2], args[3], args[4])
 			when "MSG"; readMessage(args[1], args[2], args[3..-1])
 			when "PING"; readPing(args[1], args[2], args[3])
-			when "PONG"; readPong(args[1])
+			when "PONG"; readPong(args[1], args[2], args[3])
 			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
 		end
@@ -170,6 +170,7 @@ def performDijkstra()
 		# The second element is an array of Neighbor class items corresponding to that node's neighbors
 		# We are iterating over vertexToRemove's neighbors, not our own.
 		if($graphInfo.has_key?(vertexToRemove))
+			name = $graphInfo[vertexToRemove] 
 			$graphInfo[vertexToRemove].at(1).each do |othersNeighbor| 
 				altDist = nodesToDistance[vertexToRemove] + othersNeighbor.cost
 				if altDist < nodesToDistance[othersNeighbor.name]
@@ -179,9 +180,13 @@ def performDijkstra()
 					else
 						nodesToPrevious[othersNeighbor.name] = nodesToPrevious[vertexToRemove]
 					end
+					#STDOUT.puts nodesToPrevious[othersNeighbor.name]
 				end
 			end
 		end
+
+		#Problem is that n4 never has a nodesToPrevious array set for it on its own machine
+
 		if(vertexToRemove != $hostname && nodesToDistance[vertexToRemove] != Float::INFINITY)
 			prev = nodesToPrevious[vertexToRemove]
 			$rtable.push(RoutingInfo.new(vertexToRemove, nodesToPrevious[vertexToRemove], nodesToDistance[vertexToRemove]))
@@ -193,6 +198,9 @@ end
 # -------------- Messages, Pings, and Traceroutes ----------------------- #
 
 def relayMessage(nextHop, message)
+	#STDOUT.puts "Nexthop: #{nextHop}" << " Message: #{message}"
+	STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}"
+
 	if $nodeToSocket.has_key?(nextHop)
 		$nodeToSocket[nextHop].write(message)
 		return true
@@ -261,16 +269,42 @@ end
 
 def readPing(dst, src, seqNum)
 	if(dst == $hostname)
-		relayMessage(src, "PONG #{src} #{$hostname} #{seqNum}`")
+		STDOUT.puts "PONG Message"
+		nextMsg = "PONG #{dst} #{src} #{seqNum}`"
+		i = $rtable.index{|n| n.dst == src}
+		if i == nil
+			STDOUT.puts "Nil index"
+		else
+			prevHop = $rtable[i].nextHop
+			STDOUT.puts "#{prevHop}"	
+			relayMessage(prevHop, nextMsg)
+		end
 	else
+		STDOUT.puts "PING Message"
+		nextMsg = "PING #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == dst}
 		nextHop = $rtable[i].nextHop
-		message = "PING #{dst} #{src} #{seqNum}`"
-		relayMessage(nextHop, message)
+		relayMessage(nextHop, nextMsg)
 	end
 end	
 
-def readPong(dst, seqNum)
+def readPong(dst, src, seqNum)
+	if (src == $hostname)
+		finalPong(dst,seqNum)
+	else
+		STDOUT.puts "PONG Message"
+		nextMsg = "PONG #{dst} #{src} #{seqNum}`"
+		i = $rtable.index{|n| n.dst == src}
+		if i == nil
+			STDOUT.puts "Nil index"
+		else
+			prevHop = $rtable[i].nextHop	
+			relayMessage(prevHop, nextMsg)
+		end
+	end
+end	
+
+def finalPong(dst, seqNum)
 	pm = $pingQueue.delete(PingMessage.new(dst, seqNum, nil))
 	if(pm != nil) # What happens if we get an acknowledgement for a ping we have no record of?
 		rtt = $clock_val - pm.time
