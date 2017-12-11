@@ -67,14 +67,18 @@ def msgHandler()
 			cmd = args[0]
 
 			case (cmd)
-			when "APPLYEDGE"; handleEntryAdd(args[1], args[2])
-			when "LSA"; handleLSA(args[1], args[2], args[3], args[4])
-			when "MSG"; readMessage(args[1], args[2], args[3..-1])
-			when "PING"; readPing(args[1], args[2], args[3])
-			when "PONG"; readPong(args[1], args[2], args[3])
-			when "FORWARDROUTE"; startRoute(args[1], args[2], args[3])
-			when "BACKROUTE"; backRoute(args[1], args[2], args[3])
-			else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
+				when "APPLYEDGE"; handleEntryAdd(args[1], args[2])
+				when "LSA"; handleLSA(args[1], args[2], args[3], args[4])
+
+				when "MSG"; readMessage(args[1], args[2], args[3..-1])
+
+				when "PING"; readPing(args[1], args[2], args[3])
+				when "PONG"; readPong(args[1], args[2], args[3])
+
+				when "FORWARDROUTE"; readRoute(args[1], args[2], args[3], args[4], args[5])
+				when "BACKROUTE"; endRoute(args[1], args[2], args[3], args[4], args[5])
+					
+				else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
 		end
 	end
@@ -326,7 +330,7 @@ end
 
 def startRoute(dst)
 	i = $rtable.index{|n| n.dst == dst}
-	message = "FORWARDROUTE 0 #{$hostname} #{$clock_val}`"
+	message = "FORWARDROUTE #{dst} 0 #{$hostname} #{$clock_val} 0`"
 	if (i != nil && relayMessage($rtable[i].nextHop, message))
 		Thread.new(){
 			sleep($pingTimeout)
@@ -341,7 +345,11 @@ end
 
 #I want to read a route and then send one back to destination immediately
 #So we would write two messages
-def readRoute(dst, hopCount, src, lastTime)
+def readRoute(dst, hopCount, src, lastTime, finBool)
+	#Send a message forward...
+	STDOUT.puts "GOT TO HERE"
+	STDOUT.flush
+	
 	if(dst == $hostname)
 		#When I have arrived at destination, JUST keep going back, no more forward
 		#Messages
@@ -354,10 +362,9 @@ def readRoute(dst, hopCount, src, lastTime)
 			relayMessage(prevHop, nextMsg)
 		end
 	else
-		#Send a message forward...
 		elapsedTime = lastTime + $clock_val
 		newHopCount = hopCount.to_i() + 1
-		nextMsg = "FORWARDROUTE #{dst} #{newHopCount} #{src} #{elapsedTime}`"
+		nextMsg = "FORWARDROUTE #{dst} #{newHopCount} #{src} #{elapsedTime} 0`"
 		i = $rtable.index{|n| n.dst == dst}
 		nextHop = $rtable[i].nextHop
 		relayMessage(nextHop, nextMsg)
@@ -371,6 +378,9 @@ def readRoute(dst, hopCount, src, lastTime)
 			prevHop = $rtable[i].nextHop	
 			relayMessage(prevHop, nextMsg)
 		end
+
+		STDOUT.puts "In read.."
+		STDOUT.flush
 	end
 end	
 
@@ -378,6 +388,7 @@ def readEnd(dst, hopCount, src, timeToNode, reachedEnd)
 	if (src == $hostname)
 		finalTraceRead(hopCount, src, timeToNode, reachedEnd)
 	else
+		#Else, need to keep going back to find the source node
 		nextMsg = "BACKROUTE #{dst} #{hopCount} #{src} #{timeToNode} 0`"
 		i = $rtable.index{|n| n.dst == src}
 		if i == nil
@@ -392,11 +403,12 @@ end
 #Once I have received every single TraceRoute information, I want to 
 #make sure I have reached the destination node and came back, and 
 #would print ALL of the route information from my current starting place
-def finalTraceRead(hopCount, src, timeToNode)
+def finalTraceRead(hopCount, src, timeToNode, reachedEnd)
 	#10 is the max hop count - according to specs, make sure it doesn't exceed 
 	#that or we would be going for  a while
-	if (timeToNode == 0 && hopCount < 10)
-	$allTraceRouteInfo.push(HopMessage.new(hopCount, src, timeToNode))
+	if (reachedEnd == 0 && hopCount < 10)
+		$allTraceRouteInfo.push(HopMessage.new(hopCount, src, timeToNode))
+		#STDOUT.puts "#{$allTraceRouteInfo}"
 	else
 		($allTraceRouteInfo.sort {|x,y| x.hopCount <=> y.hopCount}).each do |entry|
 			STDOUT.puts("#{entry}")
