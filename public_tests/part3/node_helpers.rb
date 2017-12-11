@@ -198,9 +198,6 @@ end
 # -------------- Messages, Pings, and Traceroutes ----------------------- #
 
 def relayMessage(nextHop, message)
-	#STDOUT.puts "Nexthop: #{nextHop}" << " Message: #{message}"
-	STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}"
-
 	if $nodeToSocket.has_key?(nextHop)
 		$nodeToSocket[nextHop].write(message)
 		return true
@@ -258,7 +255,7 @@ def writePing(dst, seqNum)
 		$pingQueue.push(pm)
 		Thread.new(){
 			sleep($pingTimeout)
-		    if($pingQueue.delete(pm) != nil)
+		    if($pingQueue.pop != nil)
 		    	STDOUT.puts "PING ERROR: HOST UNREACHABLE"
 		    end
 		}
@@ -269,18 +266,15 @@ end
 
 def readPing(dst, src, seqNum)
 	if(dst == $hostname)
-		STDOUT.puts "PONG Message"
 		nextMsg = "PONG #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == src}
 		if i == nil
-			STDOUT.puts "Nil index"
+			#STDOUT.puts "Nil index"
 		else
-			prevHop = $rtable[i].nextHop
-			STDOUT.puts "#{prevHop}"	
+			prevHop = $rtable[i].nextHop	
 			relayMessage(prevHop, nextMsg)
 		end
 	else
-		STDOUT.puts "PING Message"
 		nextMsg = "PING #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == dst}
 		nextHop = $rtable[i].nextHop
@@ -292,7 +286,6 @@ def readPong(dst, src, seqNum)
 	if (src == $hostname)
 		finalPong(dst,seqNum)
 	else
-		STDOUT.puts "PONG Message"
 		nextMsg = "PONG #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == src}
 		if i == nil
@@ -305,10 +298,11 @@ def readPong(dst, src, seqNum)
 end	
 
 def finalPong(dst, seqNum)
-	pm = $pingQueue.delete(PingMessage.new(dst, seqNum, nil))
-	if(pm != nil) # What happens if we get an acknowledgement for a ping we have no record of?
-		rtt = $clock_val - pm.time
-		STDOUT.puts "#{seqNum} #{dst} #{rtt}"
+	if !$pingQueue.empty?
+		pm = $pingQueue.pop
+		rtt = $clock_val - pm.time.to_i()
+		STDOUT.puts "#{seqNum} #{dst} #{rtt}"	
+		STDOUT.flush
 	end
 end
 	
