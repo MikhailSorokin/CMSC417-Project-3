@@ -36,36 +36,33 @@ end
 
 def receivingloop()
 	loop do
-		#$semaphore.synchronize {
-			$serverSockets.each do |servSocket|
-			  	ready = IO.select([servSocket])
-	    		readable = ready[0] #0 is sockets for reading
+		if($serverSockets.length > 0)
+		  	ready = IO.select($serverSockets)
+    		readable = ready[0] #0 is sockets for reading
 
-	    		readable.each do |socket|
-	                buf = socket.recv(2048)
-	                if buf.length == 0
-	                    #STDOUT.puts "The payload exceeds 1024 bytes."
-	                else
-	                	buf.chop! #Remove the last character, which should be `
-	                	msgs = buf.split("`")
-	                	msgs.each do |msg|
-	                		$internalMsgQueue.push(msg)
-	                	end
-	                end
-	            end
+    		readable.each do |socket|
+                buf = socket.recv(2048)
+                if buf.length == 0
+                    #STDOUT.puts "The payload exceeds 1024 bytes."
+                else
+                	buf.chop! #Remove the last character, which should be `
+                	msgs = buf.split("`")
+                	msgs.each do |msg|
+                		$internalMsgQueue.push(msg)
+                	end
+                end
+            end
 
-	            readable.clear
-			end
-		#}
+            readable.clear
+		end
 	end
 end
 
 #Need to parse messages and clear buffer as messages are read
 def msgHandler()
 	loop do
-		if !$internalMsgQueue.empty?
+		if (!$internalMsgQueue.empty?)
 			str = $internalMsgQueue.pop
-			#STDOUT.puts "#{$hostname} handling this message: #{str}"
 			args = str.split(" ")
 			cmd = args[0]
 
@@ -97,7 +94,7 @@ def handleLSA(origName, origSeqNum, origChange, neighbors)
 	neighborGroup = neighbors.split(",")
 
 	if(!$graphInfo.has_key?(origName) || $graphInfo[origName][0] < origSeqNum.to_i)
-		if (origChange.to_i == 0)
+		if (origChange.to_i == 0 && $graphInfo.has_key?(origName))
 			$graphInfo[origName][0] = origSeqNum.to_i
 		else
 			$network_change = 1
@@ -118,7 +115,6 @@ def handleLSA(origName, origSeqNum, origChange, neighbors)
 end
 
 def createOwnLSA()
-	#puts "Sending LSA"
 	message = "LSA #{$hostname} #{$seq_val.to_s} #{$local_change} "
 	$local_change = 0
 	$seq_val = $seq_val + 1;
@@ -178,30 +174,27 @@ def performDijkstra()
 				altDist = nodesToDistance[vertexToRemove] + othersNeighbor.cost
 				if altDist < nodesToDistance[othersNeighbor.name]
 					nodesToDistance[othersNeighbor.name] = altDist
-					nodesToPrevious[othersNeighbor.name] = vertexToRemove
+					if(vertexToRemove == $hostname)
+						nodesToPrevious[othersNeighbor.name] = othersNeighbor.name
+					else
+						nodesToPrevious[othersNeighbor.name] = nodesToPrevious[vertexToRemove]
+					end
 				end
 			end
 		end
 		if(vertexToRemove != $hostname && nodesToDistance[vertexToRemove] != Float::INFINITY)
-			if (nodesToPrevious[vertexToRemove] == $hostname)
-				$rtable.push(RoutingInfo.new($hostname, vertexToRemove, vertexToRemove, nodesToDistance[vertexToRemove]))
-				nodesToPrevious[vertexToRemove] = vertexToRemove
-			else
-				$rtable.push(RoutingInfo.new($hostname, vertexToRemove, nodesToPrevious[nodesToPrevious[vertexToRemove]], nodesToDistance[vertexToRemove]))
-				nodesToPrevious[vertexToRemove] = vertexToRemove
-			end
+			prev = nodesToPrevious[vertexToRemove]
+			$rtable.push(RoutingInfo.new(vertexToRemove, nodesToPrevious[vertexToRemove], nodesToDistance[vertexToRemove]))
 		end
 	end
-	$network_change == 0
-	#puts "finished DIjkstra at #{$clock_val}"
+	$network_change = 0
 end
 
 # -------------- Messages, Pings, and Traceroutes ----------------------- #
 
-def relayMessage(src, message)
-	if $nodeToSocket.has_key?(src)
-		puts "Sending Message from source: #{src} with title #{message}"
-		$nodeToSocket[src].write(message)
+def relayMessage(nextHop, message)
+	if $nodeToSocket.has_key?(nextHop)
+		$nodeToSocket[nextHop].write(message)
 		return true
 	else
 		return false
@@ -250,10 +243,9 @@ def readMessage(dst, src, msgArr)
 end
 
 def writePing(dst, seqNum)
-	i = $rtable.index{|n| n.src == $hostname}
-	nextHop = $rtable[i].nextHop
-	message = "PING #{dst} " << nextHop << " #{seqNum}`"
-	if (relayMessage(nextHop, message))
+	i = $rtable.index{|n| n.dst == dst}
+	message = "PING #{dst} #{$hostname} #{seqNum}`"
+	if (i != nil && relayMessage($rtable[i].nextHop, message))
 		pm = PingMessage.new(dst, seqNum, $clock_val)
 		$pingQueue.push(pm)
 		Thread.new(){
@@ -268,22 +260,12 @@ def writePing(dst, seqNum)
 end
 
 def readPing(dst, src, seqNum)
-	sleep(1)
-	#STDOUT.puts $hostname
-	#STDOUT.puts "HERE and"
-	#STDOUT.puts "graphInfo: #{$graphInfo}"
-	STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}}"
-	#STDOUT.flush
-	#STDOUT.puts "rtable: #{$rtable}"
-	if(dst == src)
-		STDOUT.puts "PONG!"
-		relayMessage(src, "PONG #{src} #{dst} #{seqNum}`")
+	if(dst == $hostname)
+		relayMessage(src, "PONG #{src} #{$hostname} #{seqNum}`")
 	else
-		STDOUT.puts "PING!"
-		i = $rtable.index{|n| n.src == $hostname}
-		#STDOUT.puts $rtable
+		i = $rtable.index{|n| n.dst == dst}
 		nextHop = $rtable[i].nextHop
-		message = "PING #{dst} " << nextHop << " #{seqNum}`"
+		message = "PING #{dst} #{src} #{seqNum}`"
 		relayMessage(nextHop, message)
 	end
 end	
@@ -300,10 +282,9 @@ end
 def handleEntryAdd(destNode, srcIP)
 	clientSocket = TCPSocket.new(srcIP, $nodeToPort[destNode])
 	$nodeToSocket[destNode] = clientSocket
-	$rtable.push(RoutingInfo.new($hostname, destNode, destNode, 1))
+	$rtable.push(RoutingInfo.new(destNode, destNode, 1))
 	$local_change = 1
 	$neighbors.push(Neighbor.new(destNode, 1))
-	createOwnLSA()
 end
 
 # Handles deleting entries from the table - ASYMMETRIC

@@ -7,15 +7,14 @@ $server = nil
 # --------------------- Table Classes ------------ #
 
 class RoutingInfo
-	attr_accessor :src, :dst, :nextHop, :distance
-	def initialize(src, dst, nextHop, distance)
-		@src = src
+	attr_accessor :dst, :nextHop, :distance
+	def initialize(dst, nextHop, distance)
 		@dst = dst
 		@nextHop = nextHop
 		@distance = distance
 	end
 	def to_s
-		"#{src},#{dst},#{nextHop},#{distance}"
+		"#{$hostname},#{dst},#{nextHop},#{distance}"
 	end
 
 	def ==(other)
@@ -59,9 +58,9 @@ end
 
 def shutdown(cmd)
 	#STDOUT.puts ""
-	#STDOUT.puts "listenging on #{$serverSockets.length} sockets}"
+	#STDOUT.puts "listenging on #{$serverSockets.length} sockets"
 	#STDOUT.puts "graphInfo: #{$graphInfo}"
-	#STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}}"
+	#STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}"
 	#STDOUT.puts "rtable: #{$rtable}"
 	#Create a connection for each TCP Socket again
 	STDOUT.flush
