@@ -70,7 +70,7 @@ def msgHandler()
 				when "APPLYEDGE"; handleEntryAdd(args[1], args[2])
 				when "LSA"; handleLSA(args[1], args[2], args[3], args[4])
 
-				when "MSG"; readMessage(args[1], args[2], args[3..-1])
+				when "MSG"; readMessage(args[1], args[2], args[3], args[4], args[5..-1])
 
 				when "PING"; readPing(args[1], args[2], args[3])
 				when "PONG"; readPong(args[1], args[2], args[3])
@@ -91,8 +91,8 @@ def dijkstras()
 		$update_time = $clock_val + $updateInterval
 
 		createOwnLSA()
-		performDijkstra()
 	end
+	performDijkstra()
 end
 
 def handleLSA(origName, origSeqNum, origChange, neighbors)
@@ -205,10 +205,7 @@ def performDijkstra()
 end
 
 # -------------- Messages, Pings, and Traceroutes ----------------------- #
-
 def relayMessage(nextHop, message)
-	STDOUT.flush
-	STDOUT.puts ">> #{nextHop} (#{message})"
 	STDOUT.flush
 
 	if $nodeToSocket.has_key?(nextHop)
@@ -219,44 +216,103 @@ def relayMessage(nextHop, message)
 	end
 end
 
-def writeMessage(dst, msgArr)
+def writeMessage(dst, offset, msgArr)
 	# The main loop split the message by ' ' characters. We should add those back in?
-	msg = "MSG #{dst} #{$hostname} "
+	msg = ""
 	msgArr.each do |word|
 		msg << "#{word} "
 	end
 	msg.chop!
 
-	# TODO - If msg.length > $maxPayload we need to fragment the payload over several messages.
-	if(!relayMessage(dst, msg))
-		STDOUT.puts "SENDMSG ERROR: HOST UNREACHABLE"
+	i = $rtable.index{|n| n.dst == dst}
+
+	# Assume only 1 message is sent from one particular node to another at a time.
+	if(msg.length > $maxPayload)
+		if(i == nil || !relayMessage($rtable[i].nextHop, "MSG #{dst} #{$hostname} #{offset} 1 #{msg[0..($maxPayload - 1)]}`"))
+			STDOUT.puts "SENDMSG ERROR: HOST UNREACHABLE"
+		end
+		writeMessage(dst, offset+$maxPayload, msg[$maxPayload..-1])
+	else 
+		if(i == nil || !relayMessage($rtable[i].nextHop, "MSG #{dst} #{$hostname} #{offset} 0 #{msg}`"))
+			STDOUT.puts "SENDMSG ERROR: HOST UNREACHABLE"
+		end
 	end
 end
 
+class Fragment
+	attr_accessor :msg, :mf
+	def initialize(msg, offset)
+		@msg = "#{"`" * offset}#{msg}"
+		@mf = 1
+	end
 
-def readMessage(dst, src, msgArr)
+	def to_s_extend(offset)
+		"#{self.msg[0..offset-1]}#{"`" * [0,(offset - self.msg.length)].max}"
+	end
+
+	def append_fragment(frag, offset)
+		self.msg = "#{to_s_extend(offset)}#{frag}#{self.msg[(offset + frag.length), msg.length]}"
+		self.mf = 0
+		return !self.msg.include?("`")
+	end
+
+	def add_fragment(frag, offset)
+		self.msg = "#{to_s_extend(offset)}#{frag}#{self.msg[(offset + frag.length), msg.length]}"
+		return !self.msg.include?("`") && self.mf == 0
+	end
+
+	def to_s
+		self.msg.to_s
+	end
+
+	def ==(other)
+		self.dst == other.dst
+	end
+end
+
+def readMessage(dst, src, offset, mf, msgArr)
+	msg = ""
+
+	msgArr.each do |word|
+		msg << "#{word} "
+	end
+	msg.chop!
+
 	if(dst == $hostname)
 		# We are the destination and should read the message
-		# TODO - handle message fragments to reconstruct original payload
-		msg = ""
 
-		msgArr.each do |word|
-			msg << "#{word} "
+		if(mf == "0") 
+			# This is the last fragment of the message, but the message may not be complete.
+			if($nodeToFragment.has_key?(src))
+				# We have some previous fragments. This method returns true if the message is complete
+				if($nodeToFragment[src].append_fragment(msg,offset.to_i))
+					STDOUT.puts "SENDMSG: #{src} --> #{$nodeToFragment.delete(src).msg}"
+				end
+			else
+				# No other fragments to memory, so this is the only fragment in the message.
+				STDOUT.puts "SENDMSG: #{src} --> #{msg}"
+			end
+		else
+			if($nodeToFragment.has_key?(src))
+				if($nodeToFragment[src].add_fragment(msg,offset.to_i))
+					# This means that with this fragment the message is complete so we can print.
+					STDOUT.puts "SENDMSG: #{src} --> #{$nodeToFragment.delete(src).msg}"
+				end
+			else
+				$nodeToFragment[src] = Fragment.new(msg,offset.to_i)
+			end
 		end
-		msg.chop!
-
-		# Do we output to console? Also, verify it's SENDMSG and not SNDMSG or something like that.
-		STDOUT.puts "SENDMSG: [#{src}] -- > [#{msg}]"
+		
 	else
-		msg = "MSG #{dst} #{src} "
-
-		msgArr.each do |word|
-			msg << "#{word} "
+		i = $rtable.index{|n| n.dst == dst}
+		if(i != nil)
+			if(msg.length > $maxPayload)
+				relayMessage($rtable[i].nextHop, "MSG #{dst} #{src} #{offset} 1 #{msg[0..($maxPayload - 1)]}`")
+				readMessage(dst, src, offset+$maxPayload, mf, msg[$maxPayload..-1])
+			else 
+				relayMessage($rtable[i].nextHop, "MSG #{dst} #{src} #{offset} #{mf} #{msg}`")
+			end
 		end
-		msg.chop!
-
-		# If the payload needed to be fragmented, the src node would have done so, so we don't have to fragment here.
-		relayMessage(dst, msg)
 	end
 end
 

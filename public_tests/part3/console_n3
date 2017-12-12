@@ -1,8 +1,0 @@
->> n4 (PING n4 n1 0`)
->> n4 (PING n4 n1 1`)
->> n4 (PING n4 n1 2`)
->> n4 (PING n4 n1 3`)
->> n2 (PONG n4 n1 0`)
->> n2 (PONG n4 n1 1`)
->> n2 (PONG n4 n1 2`)
->> n2 (PONG n4 n1 3`)

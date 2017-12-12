@@ -1,4 +1,1 @@
->> n3 (PONG n4 n1 0`)
->> n3 (PONG n4 n1 1`)
->> n3 (PONG n4 n1 2`)
->> n3 (PONG n4 n1 3`)
+SENDMSG: n1 --> "Hello World"

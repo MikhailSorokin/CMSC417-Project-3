@@ -121,7 +121,7 @@ def sendmsg(cmd)
 	destNode = cmd[0]
 	msgArr = cmd[1..-1]
 
-	writeMessage(destNode, msgArr)
+	writeMessage(destNode, 0, msgArr)
 end
 
 class PingMessage
@@ -219,6 +219,7 @@ def setup(hostname, port, nodes, config)
 	#How to find current ports and Sockets
 	$nodeToPort = {} #Hashmap of node to port, gotten from the NODES.txt file
 	$nodeToSocket = {} #Hashmap to index socket by node
+	$nodeToFragment = {}
 
 	#Database
 	$rtable = [] #Array of routing entries
