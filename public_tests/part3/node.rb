@@ -47,10 +47,8 @@ end
 
 def dumptable(cmd)
 	STDOUT.flush
-	#STDOUT.puts "@ #{$rtable} #{$clock_val}"
 	out_file = File.new(cmd[0], "w+")
 	($rtable.sort {|x,y| x.dst <=> y.dst}).each do |entry|
-		#STDOUT.puts "@ #{entry}"
 		out_file.puts("#{entry}")
 	end
 	out_file.close

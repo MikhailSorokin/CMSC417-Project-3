@@ -147,9 +147,7 @@ end
 def performDijkstra()
 	if($local_change == 0 && $network_change == 0)
 		return
-		puts "^ Skipped @ #{Time.now()}"
 	end
-	puts "^ #{$graphInfo.keys} @ #{Time.now()}"
 	#We have the neighbors, so just initialize all distances to Infinity
 	nodesToDistance = {}
 	nodesToPrevious = {}
@@ -204,7 +202,6 @@ def performDijkstra()
 		
 	end
 	$network_change = 0
-	puts "^ #{$rtable} @ #{Time.now()}"
 end
 
 # -------------- Messages, Pings, and Traceroutes ----------------------- #
@@ -266,8 +263,10 @@ end
 # ------------------------------ PING/PONG ------------------------------ #
 def writePing(dst, seqNum)
 	i = $rtable.index{|n| n.dst == dst}
+	if i != nil
 	message = "PING #{dst} #{$hostname} #{seqNum}`"
 	relayMessage($rtable[i].nextHop, message)
+	end
 	pm = PingMessage.new(dst, seqNum, $clock_val)
 	$pingQueue.push(pm)
 	
@@ -283,11 +282,15 @@ def readPing(dst, src, seqNum)
 	if(dst == $hostname)
 		nextMsg = "PONG #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == src}
+		if i != nil
 		relayMessage($rtable[i].nextHop, nextMsg)
+		end
 	else
 		nextMsg = "PING #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == dst}
+		if i != nil
 		relayMessage($rtable[i].nextHop, nextMsg)
+		end
 	end
 end	
 
@@ -343,21 +346,12 @@ end
 #I want to read a route and then send one back to destination immediately
 #So we would write two messages
 def readRoute(dst, hopCount, src, lastTime, finBool)
-	#Send a message forward...
-	STDOUT.puts "GOT TO HERE"
-	STDOUT.flush
-	
 	if(dst == $hostname)
 		#When I have arrived at destination, JUST keep going back, no more forward
 		#Messages
 		nextMsg = "BACKROUTE #{hopCount} #{newHopCount} #{src} #{lastTime} 1`"
 		i = $rtable.index{|n| n.dst == src}
-		if i == nil
-			#STDOUT.puts "Nil index"
-		else
-			prevHop = $rtable[i].nextHop	
-			relayMessage(prevHop, nextMsg)
-		end
+		relayMessage($rtable[i].nextHop, nextMsg)
 	else
 		elapsedTime = lastTime + $clock_val
 		newHopCount = hopCount.to_i() + 1
@@ -369,14 +363,9 @@ def readRoute(dst, hopCount, src, lastTime, finBool)
 		#Send a message backwards...
 		nextMsg = "BACKROUTE #{hopCount} #{newHopCount} #{src} #{lastTime} 0`"
 		i = $rtable.index{|n| n.dst == src}
-		if i == nil
-			#STDOUT.puts "Nil index"
-		else
-			prevHop = $rtable[i].nextHop	
-			relayMessage(prevHop, nextMsg)
-		end
+		prevHop = $rtable[i].nextHop	
+		relayMessage(prevHop, nextMsg)
 
-		STDOUT.puts "In read.."
 		STDOUT.flush
 	end
 end	
@@ -388,12 +377,7 @@ def readEnd(dst, hopCount, src, timeToNode, reachedEnd)
 		#Else, need to keep going back to find the source node
 		nextMsg = "BACKROUTE #{dst} #{hopCount} #{src} #{timeToNode} 0`"
 		i = $rtable.index{|n| n.dst == src}
-		if i == nil
-			#STDOUT.puts "Nil index"
-		else
-			prevHop = $rtable[i].nextHop	
-			relayMessage(prevHop, nextMsg)
-		end
+ 		relayMessage($rtable[i].nextHop, nextMsg)
 	end
 end	
 
@@ -405,7 +389,6 @@ def finalTraceRead(hopCount, src, timeToNode, reachedEnd)
 	#that or we would be going for  a while
 	if (reachedEnd == 0 && hopCount < 10)
 		$allTraceRouteInfo.push(HopMessage.new(hopCount, src, timeToNode))
-		#STDOUT.puts "#{$allTraceRouteInfo}"
 	else
 		($allTraceRouteInfo.sort {|x,y| x.hopCount <=> y.hopCount}).each do |entry|
 			STDOUT.puts("#{entry}")
