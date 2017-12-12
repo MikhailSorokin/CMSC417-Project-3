@@ -41,7 +41,7 @@ def receivingloop()
     		readable = ready[0] #0 is sockets for reading
 
     		readable.each do |socket|
-                buf = socket.recv(2048)
+                buf = socket.recv($maxPayload)
                 if buf.length == 0
                     #STDOUT.puts "The payload exceeds 1024 bytes."
                 else
@@ -81,17 +81,17 @@ def msgHandler()
 				else STDOUT.puts "ERROR: INVALID COMMAND \"#{cmd}\""
 			end
 		end
+
+		dijkstras()
 	end
 end
 
 def dijkstras()
-	loop do
-		if($clock_val > $update_time)
-			$update_time = $clock_val + $updateInterval
+	if($clock_val > $update_time)
+		$update_time = $clock_val + $updateInterval
 
-			createOwnLSA()
-			performDijkstra()
-		end
+		createOwnLSA()
+		performDijkstra()
 	end
 end
 
@@ -267,54 +267,41 @@ end
 def writePing(dst, seqNum)
 	i = $rtable.index{|n| n.dst == dst}
 	message = "PING #{dst} #{$hostname} #{seqNum}`"
-	if (i != nil && relayMessage($rtable[i].nextHop, message))
-		pm = PingMessage.new(dst, seqNum, $clock_val)
-		$pingQueue.push(pm)
-		
-		Thread.new() {
-			sleep($pingTimeout)
-		    if($pingQueue.pop != nil)
-		    	STDOUT.puts "good PING ERROR: HOST UNREACHABLE"
-		    end
-		}
-	else
-		STDOUT.puts "bad PING ERROR: HOST UNREACHABLE"
-		STDOUT.puts "#{$rtable}"
-	end
+	relayMessage($rtable[i].nextHop, message)
+	pm = PingMessage.new(dst, seqNum, $clock_val)
+	$pingQueue.push(pm)
+	
+	Thread.new() {
+		sleep($pingTimeout)
+	    if($pingQueue.pop != nil)
+	    	STDOUT.puts "PING ERROR: HOST UNREACHABLE"
+	    end
+	}
 end
 
 def readPing(dst, src, seqNum)
 	if(dst == $hostname)
-		puts "Writing pong #{seqNum} to #{src}"
 		nextMsg = "PONG #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == src}
-		if (i != nil && relayMessage($rtable[i].nextHop, nextMsg))
-
-		end
+		relayMessage($rtable[i].nextHop, nextMsg)
 	else
 		nextMsg = "PING #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == dst}
-		if (i != nil && relayMessage($rtable[i].nextHop, nextMsg))
-			
-		end
+		relayMessage($rtable[i].nextHop, nextMsg)
 	end
 end	
 
 def readPong(dst, src, seqNum)
 	if (src == $hostname)
-		puts "Heard pong #{seqNum} from #{dst} #{Time.now()}"
 		finalPong(dst,seqNum)
 	else
 		nextMsg = "PONG #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == src}
-		if (i != nil && relayMessage($rtable[i].nextHop, nextMsg))
-			
-		end
+		relayMessage($rtable[i].nextHop, nextMsg)
 	end
 end	
 
 def finalPong(dst, seqNum)
-	STDOUT.flush
 	if !$pingQueue.empty?
 		pm = $pingQueue.pop
 		rtt = $clock_val - pm.time.to_i()

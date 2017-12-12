@@ -57,11 +57,6 @@ def dumptable(cmd)
 end
 
 def shutdown(cmd)
-	STDOUT.puts ""
-	STDOUT.puts "listenging on #{$serverSockets.length} sockets"
-	STDOUT.puts "graphInfo: #{$graphInfo}"
-	STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}"
-	STDOUT.puts "rtable: #{$rtable}"
 	#Create a connection for each TCP Socket again
 	STDOUT.flush
 	#$semaphore.synchronize {
@@ -193,7 +188,6 @@ def main()
 
 	while(line = STDIN.gets())
 		line = line.strip()
-		puts "< #{line} Know about: #{$graphInfo.keys}  #{Time.now()}"
 		arr = line.split(' ')
 		cmd = arr[0]
 		args = arr[1..-1]
@@ -201,7 +195,7 @@ def main()
 		when "EDGEB"; edgeb(args)
 		when "EDGED"; edged(args)
 		when "EDGEU"; edgeU(args)
-		when "DUMPTABLE"; sleep(1); dumptable(args)
+		when "DUMPTABLE"; dumptable(args)
 		when "SHUTDOWN"; shutdown(args)
 		when "STATUS"; status()
 		when "SENDMSG"; sendmsg(args)
@@ -292,7 +286,7 @@ def setup(hostname, port, nodes, config)
 
 	#UPDATED CODE
 	$clock_lock = Mutex.new()
-		$tick = 1
+		$tick = 0.5
 
 		t = Thread.new {
 		while(true)
@@ -309,7 +303,6 @@ def setup(hostname, port, nodes, config)
 	Thread.new{listeningloop()}
 	Thread.new{receivingloop()}
 	Thread.new{msgHandler()}
-	Thread.new{dijkstras()}
 	main()
 end
 
