@@ -57,11 +57,11 @@ def dumptable(cmd)
 end
 
 def shutdown(cmd)
-	#STDOUT.puts ""
-	#STDOUT.puts "listenging on #{$serverSockets.length} sockets"
-	#STDOUT.puts "graphInfo: #{$graphInfo}"
-	#STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}"
-	#STDOUT.puts "rtable: #{$rtable}"
+	STDOUT.puts ""
+	STDOUT.puts "listenging on #{$serverSockets.length} sockets"
+	STDOUT.puts "graphInfo: #{$graphInfo}"
+	STDOUT.puts "writing on sockets to: #{$nodeToSocket.keys}"
+	STDOUT.puts "rtable: #{$rtable}"
 	#Create a connection for each TCP Socket again
 	STDOUT.flush
 	#$semaphore.synchronize {
@@ -141,7 +141,7 @@ class PingMessage
 	end
 
 	def ==(other)
-		self.dst == other.dst && self.seqNum == other.seqNum
+		other != nil && self.dst == other.dst && self.seqNum == other.seqNum
 	end
 end
 
@@ -193,6 +193,7 @@ def main()
 
 	while(line = STDIN.gets())
 		line = line.strip()
+		puts "< #{line} Know about: #{$graphInfo.keys}  #{Time.now()}"
 		arr = line.split(' ')
 		cmd = arr[0]
 		args = arr[1..-1]
@@ -216,6 +217,8 @@ def main()
 end
 
 def setup(hostname, port, nodes, config)
+	Thread.abort_on_exception = true
+	
 	$hostname = hostname #this is the SRC node
 	$port = port
 

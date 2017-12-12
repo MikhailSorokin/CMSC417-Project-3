@@ -99,24 +99,25 @@ def handleLSA(origName, origSeqNum, origChange, neighbors)
 	#Update the cost of the neighbors here with the sequence number
 	neighborGroup = neighbors.split(",")
 
-	if(!$graphInfo.has_key?(origName) || $graphInfo[origName][0] < origSeqNum.to_i)
-		if (origChange.to_i == 0 && $graphInfo.has_key?(origName))
-			$graphInfo[origName][0] = origSeqNum.to_i
-		else
-			$network_change = 1
-			$graphInfo[origName] = Array.new()
-			$graphInfo[origName][0] = origSeqNum.to_i
-			$graphInfo[origName][1] = Array.new()
-			neighborGroup.each do |neighbor_string|
-				neighborArr = neighbor_string.split(";")
-				neighborName = neighborArr[0]
-				neighborCost = neighborArr[1].to_i
+	if(origName != $hostname)
+		if(!$graphInfo.has_key?(origName) || $graphInfo[origName][0] < origSeqNum.to_i)
+			if (origChange.to_i == 0 && $graphInfo.has_key?(origName))
+				$graphInfo[origName][0] = origSeqNum.to_i
+			else
+				$network_change = 1
+				$graphInfo[origName] = [origSeqNum.to_i, Array.new()]
 
-				$graphInfo[origName][1].push(Neighbor.new(neighborName, neighborCost))
+				neighborGroup.each do |neighbor_string|
+					neighborArr = neighbor_string.split(";")
+					neighborName = neighborArr[0]
+					neighborCost = neighborArr[1].to_i
+
+					$graphInfo[origName][1].push(Neighbor.new(neighborName, neighborCost))
+				end
 			end
-		end
 
-		floodMessage("LSA #{origName} #{origSeqNum} #{origChange} #{neighbors}`")
+			floodMessage("LSA #{origName} #{origSeqNum} #{origChange} #{neighbors}`")
+		end
 	end
 end
 
@@ -130,6 +131,7 @@ def createOwnLSA()
 	end
 	message.chop! #Remove the last character, which will be a space
 
+	$graphInfo[$hostname] = [$seq_val - 1, $neighbors]
 	floodMessage("#{message}`")
 end
 
@@ -145,7 +147,9 @@ end
 def performDijkstra()
 	if($local_change == 0 && $network_change == 0)
 		return
+		puts "^ Skipped @ #{Time.now()}"
 	end
+	puts "^ #{$graphInfo.keys} @ #{Time.now()}"
 	#We have the neighbors, so just initialize all distances to Infinity
 	nodesToDistance = {}
 	nodesToPrevious = {}
@@ -200,13 +204,14 @@ def performDijkstra()
 		
 	end
 	$network_change = 0
+	puts "^ #{$rtable} @ #{Time.now()}"
 end
 
 # -------------- Messages, Pings, and Traceroutes ----------------------- #
 
 def relayMessage(nextHop, message)
 	STDOUT.flush
-	STDOUT.puts "#{nextHop} and Messagess #{message}"
+	STDOUT.puts ">> #{nextHop} (#{message})"
 	STDOUT.flush
 
 	if $nodeToSocket.has_key?(nextHop)
@@ -274,11 +279,13 @@ def writePing(dst, seqNum)
 		}
 	else
 		STDOUT.puts "bad PING ERROR: HOST UNREACHABLE"
+		STDOUT.puts "#{$rtable}"
 	end
 end
 
 def readPing(dst, src, seqNum)
 	if(dst == $hostname)
+		puts "Writing pong #{seqNum} to #{src}"
 		nextMsg = "PONG #{dst} #{src} #{seqNum}`"
 		i = $rtable.index{|n| n.dst == src}
 		if (i != nil && relayMessage($rtable[i].nextHop, nextMsg))
@@ -295,6 +302,7 @@ end
 
 def readPong(dst, src, seqNum)
 	if (src == $hostname)
+		puts "Heard pong #{seqNum} from #{dst} #{Time.now()}"
 		finalPong(dst,seqNum)
 	else
 		nextMsg = "PONG #{dst} #{src} #{seqNum}`"
